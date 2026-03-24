@@ -1,0 +1,48 @@
+#!/bin/bash
+STATIC=/var/lib/kolla/venv/lib/python3.12/site-packages/skyline_console/static
+BUILD=/opt/skyline-custom/skyline-build/skyline_console/static
+
+echo "[1/7] Deploying custom bundles..."
+if [ -d "$BUILD" ]; then
+  # CRITICAL: Remove ALL existing JS to prevent stale bundle conflicts
+  docker exec skyline_console bash -c "rm -f $STATIC/*.js $STATIC/*.js.gz"
+  # Deploy index.html and all JS from our build
+  docker cp $BUILD/index.html skyline_console:$STATIC/index.html 2>/dev/null
+  for f in $BUILD/*.js $BUILD/*.js.gz; do
+    [ -f "$f" ] && docker cp "$f" skyline_console:$STATIC/$(basename "$f") 2>/dev/null
+  done
+  TS=$(docker exec skyline_console grep -o 'runtime\.\([0-9]*\)' $STATIC/index.html | grep -o '[0-9]*')
+  echo "    Bundles deployed (TS: $TS)"
+else
+  echo "    No custom build found, skipping"
+fi
+
+echo "[2/7] Restoring images..."
+docker cp /opt/skyline-custom/xloud_logo_new.png skyline_console:$STATIC/asset/image/logo.png 2>/dev/null
+docker cp /opt/skyline-custom/xloud_logo_new.png skyline_console:$STATIC/asset/image/loginRightLogo.png 2>/dev/null
+docker cp /opt/skyline-custom/xloud_favicon.svg skyline_console:$STATIC/favicon.svg 2>/dev/null
+docker cp /opt/skyline-custom/avs-card-svg-1.svg skyline_console:$STATIC/avs-card-svg-1.svg 2>/dev/null
+docker cp /opt/skyline-custom/cloud-logo.svg skyline_console:$STATIC/asset/image/cloud-logo.svg 2>/dev/null
+docker cp /opt/skyline-custom/cloud-logo-white.svg skyline_console:$STATIC/asset/image/cloud-logo-white.svg 2>/dev/null
+
+echo "[3/7] Fixing permissions..."
+docker exec skyline_console bash -c "chmod -R a+r $STATIC/ && find $STATIC/ -type d -exec chmod a+rx {} +"
+
+echo "[4/7] Patching index.html..."
+docker cp /opt/skyline-custom/skyline_patch.py skyline_console:/tmp/skyline_patch.py
+docker exec skyline_console python3 /tmp/skyline_patch.py
+
+echo "[5/7] Applying login page redesign..."
+docker cp /opt/skyline-custom/login_fix.py skyline_console:/tmp/login_fix.py
+docker exec skyline_console python3 /tmp/login_fix.py
+
+echo "[6/7] Restoring watcher nginx proxy..."
+docker cp /opt/skyline-custom/add_watcher_proxy.py skyline_console:/tmp/add_watcher_proxy.py 2>/dev/null
+docker exec skyline_console python3 /tmp/add_watcher_proxy.py 2>/dev/null
+docker exec skyline_console nginx -t 2>/dev/null
+docker exec skyline_console nginx -s reload 2>/dev/null
+
+echo "[7/7] Checking watcher service mapping..."
+grep -q 'infra-optim' /etc/xavs/skyline-apiserver/skyline.yaml || sed -i '/instance-ha: masakari/a \    infra-optim: watcher' /etc/xavs/skyline-apiserver/skyline.yaml
+
+echo "=== Xloud branding restored ==="
