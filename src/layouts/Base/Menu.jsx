@@ -123,14 +123,7 @@ export class LayoutMenu extends Component {
     const path = getPath({ key });
     const { pathname } = this.props;
     if (pathname !== path) {
-      // Force full reload when crossing layout boundaries
-      const currentSection = pathname.split('/')[1];
-      const targetSection = path.split('/')[1];
-      if (currentSection !== targetSection) {
-        window.location.href = path;
-      } else {
-        this.routing.push(path);
-      }
+      this.routing.push(path);
     }
   };
 
