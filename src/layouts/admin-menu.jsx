@@ -926,6 +926,22 @@ const renderMenu = (t) => {
           children: [],
           hasBreadcrumb: true,
         },
+        {
+          path: '/monitor-center/cluster-health-admin',
+          name: t('Cluster Health'),
+          key: 'clusterHealthAdmin',
+          level: 1,
+          children: [],
+          hasBreadcrumb: true,
+        },
+        {
+          path: '/monitor-center/security-posture-admin',
+          name: t('Security Posture'),
+          key: 'securityPostureAdmin',
+          level: 1,
+          children: [],
+          hasBreadcrumb: true,
+        },
       ],
     },
     {
