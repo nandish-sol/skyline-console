@@ -11,6 +11,11 @@ export class ActionStore extends Base {
     return 'uuid';
   }
 
+  async getCountForPage(newParams, newData, all_projects, result) {
+    const items = result.actions || [];
+    return { count: items.length, total: items.length };
+  }
+
   @action
   async fetchDetail({ id, silent }) {
     if (!silent) {

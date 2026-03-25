@@ -11,6 +11,11 @@ export class GoalStore extends Base {
     return 'uuid';
   }
 
+  async getCountForPage(newParams, newData, all_projects, result) {
+    const items = result.goals || [];
+    return { count: items.length, total: items.length };
+  }
+
   @action
   async fetchDetail({ id, silent }) {
     if (!silent) {

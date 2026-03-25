@@ -11,6 +11,11 @@ export class AuditStore extends Base {
     return 'uuid';
   }
 
+  async getCountForPage(newParams, newData, all_projects, result) {
+    const items = result.audits || [];
+    return { count: items.length, total: items.length };
+  }
+
   @action
   async create(newbody) {
     return this.client.create(newbody);

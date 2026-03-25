@@ -11,6 +11,11 @@ export class ActionPlanStore extends Base {
     return 'uuid';
   }
 
+  async getCountForPage(newParams, newData, all_projects, result) {
+    const items = result.action_plans || [];
+    return { count: items.length, total: items.length };
+  }
+
   @action
   async start(id) {
     return this.client.update(id, { state: 'TRIGGERED' });

@@ -20,6 +20,8 @@ export class CreateAuditTemplate extends ModalAction {
     this.state = {
       goals: [],
       strategies: [],
+      selectedStrategy: null,
+      parametersSpec: null,
     };
     this.fetchGoals();
     this.fetchStrategies();
@@ -60,8 +62,79 @@ export class CreateAuditTemplate extends ModalAction {
     };
   }
 
+  onStrategyChange = async (value) => {
+    if (!value) {
+      this.setState({ selectedStrategy: null, parametersSpec: null });
+      return;
+    }
+    const strategy = (this.state.strategies || []).find(
+      (s) => s.name === value
+    );
+    if (strategy) {
+      const detail = await this.strategyStore.fetchDetail({
+        id: strategy.uuid,
+      });
+      const spec = detail.parameters_spec;
+      this.setState({
+        selectedStrategy: value,
+        parametersSpec: spec,
+      });
+    }
+  };
+
+  getParameterFormItems() {
+    const { parametersSpec } = this.state;
+    if (!parametersSpec || !parametersSpec.properties) {
+      return [];
+    }
+    const properties = parametersSpec.properties;
+    const required = parametersSpec.required || [];
+    return Object.keys(properties).map((key) => {
+      const prop = properties[key];
+      const item = {
+        name: `param_${key}`,
+        label: key,
+        required: required.includes(key),
+        extra: prop.description || '',
+      };
+      if (prop.type === 'number' || prop.type === 'integer') {
+        item.type = 'input-number';
+        if (prop.default !== undefined) {
+          item.placeholder = `${t('Default')}: ${prop.default}`;
+        }
+        if (prop.minimum !== undefined) {
+          item.min = prop.minimum;
+        }
+        if (prop.maximum !== undefined) {
+          item.max = prop.maximum;
+        }
+      } else if (prop.type === 'boolean') {
+        item.type = 'radio';
+        item.options = [
+          { label: 'True', value: 'true' },
+          { label: 'False', value: 'false' },
+        ];
+      } else if (prop.type === 'string' && prop.choice) {
+        item.type = 'select';
+        item.options = prop.choice.map((c) => ({ label: c, value: c }));
+      } else if (prop.type === 'array') {
+        item.type = 'textarea';
+        item.placeholder = t('JSON array format, e.g. []');
+      } else if (prop.type === 'object') {
+        item.type = 'textarea';
+        item.placeholder = t('JSON object format, e.g. {}');
+      } else {
+        item.type = 'input';
+        if (prop.default !== undefined) {
+          item.placeholder = `${t('Default')}: ${prop.default}`;
+        }
+      }
+      return item;
+    });
+  }
+
   get formItems() {
-    return [
+    const items = [
       {
         name: 'name',
         label: t('Name'),
@@ -82,6 +155,7 @@ export class CreateAuditTemplate extends ModalAction {
         type: 'select',
         options: this.strategyOptions,
         required: false,
+        onChange: (value) => this.onStrategyChange(value),
       },
       {
         name: 'description',
@@ -97,11 +171,32 @@ export class CreateAuditTemplate extends ModalAction {
         placeholder: t('JSON format scope, e.g. []'),
       },
     ];
+
+    const paramItems = this.getParameterFormItems();
+    if (paramItems.length > 0) {
+      items.push({
+        name: 'params_divider',
+        label: t('Strategy Parameters'),
+        type: 'divider',
+      });
+      items.push(...paramItems);
+    }
+
+    return items;
   }
 
   onSubmit = (values) => {
     const { scope, ...rest } = values;
-    const body = { ...rest };
+    const body = {
+      name: rest.name,
+      goal: rest.goal,
+      description: rest.description,
+    };
+
+    if (rest.strategy) {
+      body.strategy = rest.strategy;
+    }
+
     if (scope) {
       try {
         body.scope = JSON.parse(scope);
@@ -109,6 +204,35 @@ export class CreateAuditTemplate extends ModalAction {
         body.scope = scope;
       }
     }
+
+    // Collect parameters
+    const parameters = {};
+    const { parametersSpec } = this.state;
+    if (parametersSpec && parametersSpec.properties) {
+      Object.keys(parametersSpec.properties).forEach((key) => {
+        const val = values[`param_${key}`];
+        if (val !== undefined && val !== null && val !== '') {
+          const prop = parametersSpec.properties[key];
+          if (prop.type === 'number' || prop.type === 'integer') {
+            parameters[key] = Number(val);
+          } else if (prop.type === 'boolean') {
+            parameters[key] = val === 'true' || val === true;
+          } else if (prop.type === 'array' || prop.type === 'object') {
+            try {
+              parameters[key] = JSON.parse(val);
+            } catch (e) {
+              parameters[key] = val;
+            }
+          } else {
+            parameters[key] = val;
+          }
+        }
+      });
+    }
+    if (Object.keys(parameters).length > 0) {
+      body.parameters = parameters;
+    }
+
     return this.store.create(body);
   };
 }
