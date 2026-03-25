@@ -23,7 +23,20 @@ export class ActionLog extends Base {
   getColumns = () => actionColumn(this);
 
   get hideSearch() {
-    return true;
+    return false;
+  }
+
+  get searchFilters() {
+    return [
+      {
+        label: t('Action'),
+        name: 'action',
+      },
+      {
+        label: t('Request ID'),
+        name: 'request_id',
+      },
+    ];
   }
 }
 

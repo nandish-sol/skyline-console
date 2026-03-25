@@ -24,6 +24,7 @@ import {
   SwitcherOutlined,
   ContainerOutlined,
   HeartOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 
 const renderMenu = (t) => {
@@ -846,6 +847,21 @@ const renderMenu = (t) => {
           path: '/ha/xavs-health-admin',
           name: t('XAVS Health'),
           key: 'xavsHealth',
+          level: 1,
+          children: [],
+        },
+      ],
+    },
+    {
+      path: '/management',
+      name: t('Audit'),
+      key: 'audit',
+      icon: <AuditOutlined />,
+      children: [
+        {
+          path: '/management/activity-log-admin',
+          name: t('Activity Log'),
+          key: 'activityLog',
           level: 1,
           children: [],
         },
