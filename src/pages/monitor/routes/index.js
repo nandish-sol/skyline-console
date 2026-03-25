@@ -14,11 +14,14 @@
 
 import BaseLayout from 'layouts/Basic';
 import E404 from 'pages/base/containers/404';
+import ActivityLog from 'pages/management/containers/ActivityLog';
 import PhysicalNode from '../containers/PhysicalNode';
 import StorageCluster from '../containers/StorageCluster';
 import OpenstackService from '../containers/OpenstackService';
 import OtherService from '../containers/OtherService';
 import Overview from '../containers/Overview';
+import Monitoring from '../containers/Monitoring';
+import Logging from '../containers/Logging';
 
 const PATH = '/monitor-center';
 export default [
@@ -45,6 +48,21 @@ export default [
       {
         path: `${PATH}/other-service-admin`,
         component: OtherService,
+        exact: true,
+      },
+      {
+        path: `${PATH}/monitoring-admin`,
+        component: Monitoring,
+        exact: true,
+      },
+      {
+        path: `${PATH}/logging-admin`,
+        component: Logging,
+        exact: true,
+      },
+      {
+        path: `${PATH}/activity-log-admin`,
+        component: ActivityLog,
         exact: true,
       },
       { path: '*', component: E404 },

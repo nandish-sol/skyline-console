@@ -390,38 +390,25 @@ export class GlobalSearch extends Component {
     }, DEBOUNCE_MS);
   };
 
-  doSearch = (query) => {
-    const skylineBase = '/api/openstack/skyline/api/v1';
-    const url = `${skylineBase}/extension/xloud-search?q=${encodeURIComponent(
-      query
-    )}`;
-
-    fetch(url, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-      .then((resp) => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
-      })
-      .then((data) => {
-        // Only update if query still matches
-        if (this.state.query.trim() === query) {
-          const results = data.results || [];
-          this.setState({
-            results,
-            loading: false,
-            noResults: results.length === 0,
-          });
-        }
-      })
-      .catch(() => {
-        if (this.state.query.trim() === query) {
-          this.setState({ results: [], loading: false, noResults: true });
-        }
+  doSearch = async (query) => {
+    try {
+      const { default: client } = await import('client/skyline');
+      const data = await client.request.get(`extension/xloud-search`, {
+        q: query,
       });
+      if (this.state.query.trim() === query) {
+        const results = data.results || [];
+        this.setState({
+          results,
+          loading: false,
+          noResults: results.length === 0,
+        });
+      }
+    } catch (e) {
+      if (this.state.query.trim() === query) {
+        this.setState({ results: [], loading: false, noResults: true });
+      }
+    }
   };
 
   handleOverlayClick = (e) => {

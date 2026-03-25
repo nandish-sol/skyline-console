@@ -23,8 +23,6 @@ import {
   AppstoreOutlined,
   SwitcherOutlined,
   ContainerOutlined,
-  HeartOutlined,
-  AuditOutlined,
 } from '@ant-design/icons';
 
 const renderMenu = (t) => {
@@ -834,36 +832,6 @@ const renderMenu = (t) => {
               routePath: '/container-infra/cluster-template/update/:id',
             },
           ],
-        },
-      ],
-    },
-    {
-      path: '/ha',
-      name: t('Health'),
-      key: 'haHealth',
-      icon: <HeartOutlined />,
-      children: [
-        {
-          path: '/ha/xavs-health-admin',
-          name: t('XAVS Health'),
-          key: 'xavsHealth',
-          level: 1,
-          children: [],
-        },
-      ],
-    },
-    {
-      path: '/management',
-      name: t('Audit'),
-      key: 'audit',
-      icon: <AuditOutlined />,
-      children: [
-        {
-          path: '/management/activity-log-admin',
-          name: t('Activity Log'),
-          key: 'activityLog',
-          level: 1,
-          children: [],
         },
       ],
     },
