@@ -651,6 +651,26 @@ export class BaseStep extends Base {
     return !bootFromVolume;
   }
 
+  get showCdromImage() {
+    const { cdromSource } = this.state;
+    return cdromSource === 'image';
+  }
+
+  get showCdromVolume() {
+    const { cdromSource } = this.state;
+    return cdromSource === 'volume';
+  }
+
+  get cdromVolumes() {
+    if (!this.cdromVolumeStore) {
+      this.cdromVolumeStore = new VolumeStore();
+      this.cdromVolumeStore.fetchList({ status: 'available' });
+    }
+    return (this.cdromVolumeStore.list.data || []).filter(
+      (v) => v.status === 'available'
+    );
+  }
+
   getFlavorComponent() {
     return <FlavorSelectTable onChange={this.onFlavorChange} />;
   }
@@ -836,6 +856,66 @@ export class BaseStep extends Base {
         ),
         onChange: this.onDataDiskChange,
         display: this.enableCinder,
+      },
+      {
+        name: 'cdromSource',
+        label: t('CD-ROM Source'),
+        type: 'radio',
+        options: [
+          { label: t('None'), value: 'none' },
+          { label: t('Image'), value: 'image' },
+          { label: t('Volume'), value: 'volume' },
+        ],
+        default: 'none',
+        tip: t('Attach an ISO image or existing volume as a CD-ROM device.'),
+      },
+      {
+        name: 'cdromImage',
+        label: t('CD-ROM Image'),
+        type: 'select-table',
+        hidden: !this.showCdromImage,
+        required: this.showCdromImage,
+        data: this.images,
+        isLoading: globalImageStore.list.isLoading,
+        isMulti: false,
+        filterParams: [
+          {
+            label: t('Name'),
+            name: 'name',
+          },
+        ],
+        columns: getImageColumns(this),
+        tabs: getImageSystemTabs(),
+        defaultTabValue: 'all',
+        extra: t('Select an image to mount as CD-ROM drive.'),
+        tabKey: 'os_distro',
+        dependencies: ['cdromSource'],
+      },
+      {
+        name: 'cdromVolume',
+        label: t('CD-ROM Volume'),
+        type: 'select-table',
+        hidden: !this.showCdromVolume,
+        required: this.showCdromVolume,
+        data: this.cdromVolumes,
+        isLoading: this.cdromVolumeStore
+          ? this.cdromVolumeStore.list.isLoading
+          : false,
+        isMulti: false,
+        filterParams: [
+          {
+            label: t('Name'),
+            name: 'name',
+          },
+        ],
+        columns: [
+          { title: t('Name'), dataIndex: 'name' },
+          { title: t('Size'), dataIndex: 'size', render: (v) => `${v} GiB` },
+          { title: t('Status'), dataIndex: 'status' },
+          { title: t('Volume Type'), dataIndex: 'volume_type' },
+        ],
+        extra: t('Select an existing volume to mount as CD-ROM drive.'),
+        dependencies: ['cdromSource'],
       },
     ];
   }
