@@ -19,7 +19,7 @@ import SelectLang from 'components/SelectLang';
 
 import logo from 'asset/image/cloud-logo.svg';
 import loginFullImage from 'asset/image/xloud-bg-login.png';
-import loginRightLogo from 'asset/image/xloud-one-color-alt.svg';
+import loginRightLogo from 'asset/image/xloud-tech-logo.png';
 import styles from './index.less';
 
 export class AuthLayout extends Component {
