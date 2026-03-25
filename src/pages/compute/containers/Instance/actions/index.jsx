@@ -48,6 +48,9 @@ import DeleteIronic from './DeleteIronic';
 import ConfirmResize from './ConfirmResize';
 import RevertResize from './RevertResize';
 import ModifyTags from './ModifyTags';
+import XloudAdjust from './XloudAdjust';
+import AttachPCI from './AttachPCI';
+import DetachPCI from './DetachPCI';
 
 const statusActions = [
   StartAction,
@@ -78,6 +81,7 @@ const configActions = [
   ConfirmResize,
   RevertResize,
   Resize,
+  XloudAdjust,
   ChangePassword,
   Rebuild,
 ];
@@ -160,6 +164,10 @@ const adminActions = {
       },
       {
         action: ConfirmResize,
+      },
+      {
+        title: t('PCI Devices'),
+        actions: [AttachPCI, DetachPCI],
       },
     ],
   },

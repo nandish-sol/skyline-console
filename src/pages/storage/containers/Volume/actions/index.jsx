@@ -31,6 +31,7 @@ import CreateTransfer from './CreateTransfer';
 import CancelTransfer from './CancelTransfer';
 import CreateInstance from './CreateInstance';
 import Bootable from './Bootable';
+import LiveRetype from './LiveRetype';
 
 const dataProtectionActions = {
   title: t('Data Protection'),
@@ -100,6 +101,9 @@ const adminConfig = {
       },
       {
         action: Migrate,
+      },
+      {
+        action: LiveRetype,
       },
     ],
   },
