@@ -18,8 +18,8 @@ import renderRoutes from 'utils/RouterConfig';
 import SelectLang from 'components/SelectLang';
 
 import logo from 'asset/image/cloud-logo.svg';
-import loginFullImage from 'asset/image/login-full.png';
-import loginRightLogo from 'asset/image/loginRightLogo.png';
+import loginFullImage from 'asset/image/xloud-bg-login.png';
+import loginRightLogo from 'asset/image/xloud-one-color-alt.svg';
 import styles from './index.less';
 
 export class AuthLayout extends Component {

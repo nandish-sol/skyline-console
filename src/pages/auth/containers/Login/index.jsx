@@ -63,12 +63,11 @@ export class Login extends Component {
   }
 
   get productName() {
-    const { product_name = { zh: t('Cloud Platform'), en: 'Cloud Platform' } } =
+    const { product_name = { zh: 'Xloud Cloud', en: 'Xloud Cloud' } } =
       this.info;
     const { getLocaleShortName } = i18n;
     const language = getLocaleShortName();
-    const name =
-      product_name[language] || t('Cloud Platform') || 'Cloud Platform';
+    const name = product_name[language] || 'Xloud Cloud';
     return t('Welcome, {name}', { name });
   }
 
