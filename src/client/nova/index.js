@@ -45,6 +45,12 @@ export class NovaClient extends Base {
             key: 'tags',
             responseKey: 'tag',
           },
+          // XLoud: PCI device sub-resource on servers
+          {
+            name: 'pciDevices',
+            key: 'os-pci-devices',
+            responseKey: 'pci_device',
+          },
         ],
         extendOperations: [
           {
@@ -61,6 +67,13 @@ export class NovaClient extends Base {
             key: 'tags',
             method: 'put',
           },
+          // XLoud: Get xloud-status for an instance
+          {
+            name: 'xloudStatus',
+            key: 'xloud-status',
+            method: 'get',
+          },
+          // xloudAdjust is a top-level resource, not under servers
         ],
       },
       {
@@ -130,12 +143,21 @@ export class NovaClient extends Base {
         name: 'hypervisors',
         key: 'os-hypervisors',
         responseKey: 'hypervisor',
+        // XLoud: PCI devices available on a hypervisor
+        subResources: [
+          {
+            name: 'pci',
+            key: 'pci',
+            responseKey: 'pci_device',
+          },
+        ],
       },
       {
         name: 'pciDevices',
         key: 'os-pci-devices',
         responseKey: 'pci_device',
       },
+      // XLoud: os-xloud-adjust is called directly via client.nova.request.post()
     ];
   }
 }
