@@ -19,6 +19,7 @@ import SegmentsDetail from '../containers/Segments/Detail';
 import HostsDetail from '../containers/Hosts/Detail';
 import NotificationsDetail from '../containers/Notifications/Detail';
 import StepCreate from '../containers/Segments/actions/StepCreate';
+import XAVSHealth from '../containers/XAVSHealth';
 
 const PATH = '/ha';
 export default [
@@ -26,6 +27,7 @@ export default [
     path: PATH,
     component: BaseLayout,
     routes: [
+      { path: `${PATH}/xavs-health-admin`, component: XAVSHealth, exact: true },
       { path: `${PATH}/segments-admin`, component: Segments, exact: true },
       {
         path: `${PATH}/segments-admin/create-step-admin`,
