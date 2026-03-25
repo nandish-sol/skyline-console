@@ -13,12 +13,12 @@
 // limitations under the License.
 
 module.exports = {
-  'primary-color': '#0068FF',
+  // XLoud brand colors
+  'primary-color': '#1A1A2E',
   'link-color': '#0068FF',
-  // 'link-hover-color': '#005ADE',
-  // 'link-active-color': '005ADE',
-  'success-color': '#57E39B',
-  'warning-color': '#979797',
+  'link-hover-color': '#005ADE',
+  'success-color': '#52C41A',
+  'warning-color': '#FAAD14',
   'error-color': '#EB354D',
   'btn-default-color': '#0068FF',
   'btn-default-border': '#0068FF',
