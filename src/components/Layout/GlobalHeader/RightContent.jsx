@@ -14,11 +14,23 @@
 
 import React, { Component } from 'react';
 import { inject, observer } from 'mobx-react';
-import { Button, Col, Row } from 'antd';
+import { Button, Col, Row, Tooltip } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import GlobalSearch from 'components/GlobalSearch';
 import Avatar from './AvatarDropdown';
 import styles from './index.less';
 
 export class GlobalHeaderRight extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { searchVisible: false };
+  }
+
+  // eslint-disable-next-line react/sort-comp
+  toggleSearch = () => {
+    this.setState((prev) => ({ searchVisible: !prev.searchVisible }));
+  };
+
   get isAdminPage() {
     const { isAdminPage = false } = this.props;
     return isAdminPage;
@@ -69,6 +81,7 @@ export class GlobalHeaderRight extends Component {
   }
 
   render() {
+    const { searchVisible } = this.state;
     return (
       <div className={styles.right}>
         <Row justify="space-between" align="middle" gutter={10}>
@@ -79,9 +92,28 @@ export class GlobalHeaderRight extends Component {
           </Col>
           {this.renderExtra()}
           <Col>
+            <Tooltip title={`${t('Search')} (Ctrl+K)`}>
+              <SearchOutlined
+                className={styles['search-icon']}
+                // eslint-disable-next-line react/sort-comp
+                onClick={this.toggleSearch}
+                style={{
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  marginRight: 12,
+                  color: '#0068ff',
+                }}
+              />
+            </Tooltip>
+          </Col>
+          <Col>
             <Avatar menu />
           </Col>
         </Row>
+        <GlobalSearch
+          visible={searchVisible}
+          onClose={() => this.setState({ searchVisible: false })}
+        />
       </div>
     );
   }

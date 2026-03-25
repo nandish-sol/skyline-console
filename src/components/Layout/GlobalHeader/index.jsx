@@ -21,6 +21,7 @@ import classnames from 'classnames';
 import GlobalNav from '../GlobalNav';
 import ProjectDropdown from './ProjectDropdown';
 import RightContent from './RightContent';
+// GlobalSearch is rendered inside RightContent as an icon
 import styles from './index.less';
 
 export default function HeaderContent(props) {
