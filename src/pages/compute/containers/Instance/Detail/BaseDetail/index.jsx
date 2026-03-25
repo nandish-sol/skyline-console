@@ -40,6 +40,21 @@ import { generateId } from 'utils/index';
 import { getSinceTime, getLocalTimeStr } from 'utils/time';
 import AttachVolume from 'pages/compute/containers/Instance/actions/AttachVolume';
 import globalRootStore from 'stores/root';
+import {
+  isHotaddEnabled,
+  extractStatusFromResponse,
+  mbToGb,
+  STATUS_CURRENT_VCPUS,
+  STATUS_CURRENT_MEMORY,
+  STATUS_MAX_VCPUS,
+  STATUS_MAX_MEMORY,
+  STATUS_MIN_VCPUS,
+  STATUS_MIN_MEMORY,
+  STATUS_BALLOON_ACTIVE,
+  STATUS_ATTACHED_DIMMS_MB,
+  STATUS_HAS_VIRTIOMEM,
+} from 'resources/nova/xloud';
+import client from 'client';
 import styles from './index.less';
 
 export class BaseDetail extends Base {
@@ -49,6 +64,7 @@ export class BaseDetail extends Base {
     if (this.detailData.server_groups[0]) {
       this.fetchSeverGroup();
     }
+    this.fetchXloudStatus();
   }
 
   init() {
@@ -56,17 +72,87 @@ export class BaseDetail extends Base {
     this.interfaceStore = new PortStore();
     this.volumeStore = new InstanceVolumeStore();
     this.serverGroupStore = new ServerGroupStore();
+    this.state = {
+      ...this.state,
+      xloudStatus: null,
+    };
+  }
+
+  fetchXloudStatus = async () => {
+    const flavor = toJS(this.detailData.flavor) || {};
+    const extraSpecs = flavor.extra_specs || {};
+    if (!isHotaddEnabled(extraSpecs)) return;
+    try {
+      const result = await client.nova.servers.xloudStatus(this.id);
+      const status = extractStatusFromResponse(result);
+      this.setState({ xloudStatus: status });
+    } catch (e) {
+      // Silently fail — card just won't show
+    }
+  };
+
+  get xloudStatusCard() {
+    const { xloudStatus } = this.state || {};
+    if (!xloudStatus) return null;
+
+    const balloonActive = xloudStatus[STATUS_BALLOON_ACTIVE];
+    const hasVirtiomem = xloudStatus[STATUS_HAS_VIRTIOMEM];
+    const attachedDimms = xloudStatus[STATUS_ATTACHED_DIMMS_MB] || 0;
+
+    let memMode = t('DIMM Hotplug');
+    if (hasVirtiomem) memMode = t('Virtio-Mem');
+    else if (balloonActive) memMode = t('Balloon + DIMM');
+
+    const options = [
+      {
+        label: t('Current vCPUs'),
+        content: `${xloudStatus[STATUS_CURRENT_VCPUS]} / ${
+          xloudStatus[STATUS_MAX_VCPUS]
+        } ${t('max')}`,
+      },
+      {
+        label: t('Current Memory'),
+        content: `${mbToGb(xloudStatus[STATUS_CURRENT_MEMORY])} GB / ${mbToGb(
+          xloudStatus[STATUS_MAX_MEMORY]
+        )} GB ${t('max')}`,
+      },
+      {
+        label: t('Min vCPUs'),
+        content: xloudStatus[STATUS_MIN_VCPUS],
+      },
+      {
+        label: t('Min Memory'),
+        content: `${mbToGb(xloudStatus[STATUS_MIN_MEMORY])} GB`,
+      },
+      {
+        label: t('Memory Mode'),
+        content: memMode,
+      },
+    ];
+    if (attachedDimms > 0) {
+      options.push({
+        label: t('Hotplugged DIMMs'),
+        content: `${mbToGb(attachedDimms)} GB`,
+      });
+    }
+    return {
+      title: t('Resource Status (XLoud)'),
+      options,
+    };
   }
 
   get leftCards() {
-    const cards = [
-      this.networkCard,
-      this.flavorCard,
+    const cards = [this.networkCard, this.flavorCard];
+    const xloudCard = this.xloudStatusCard;
+    if (xloudCard) {
+      cards.push(xloudCard);
+    }
+    cards.push(
       this.imageCard,
       this.securityGroupCard,
       this.tagsCard,
-      this.keypairCard,
-    ];
+      this.keypairCard
+    );
     if (!isIronicInstance(this.detailData)) {
       cards.push(this.serverGroupCard);
     }

@@ -178,6 +178,7 @@ export class ParamSetting extends Base {
       'memPageSizeMore',
       'more',
       'memPageSize',
+      'enableHotadd',
     ];
   }
 
@@ -274,6 +275,7 @@ export class ParamSetting extends Base {
       memPageSizeMore,
       more = false,
       memPageSize,
+      enableHotadd = false,
     } = this.state;
     const isBareMetal = architecture === 'bare_metal';
     const hasIOPS = categoryHasIOPS(category);
@@ -364,6 +366,48 @@ export class ParamSetting extends Base {
         type: 'input-int',
         min: 1,
         required: true,
+      },
+      {
+        name: 'hotadd-title',
+        label: t('Hot-Add Configuration'),
+        type: 'title',
+        hidden: isBareMetal,
+      },
+      {
+        name: 'enableHotadd',
+        label: t('Enable Hot-Add'),
+        type: 'radio',
+        optionType: 'default',
+        hidden: isBareMetal,
+        options: [
+          { label: t('Yes'), value: true },
+          { label: t('No'), value: false },
+        ],
+        tip: t(
+          'Enable vCPU and memory hot-add for instances using this flavor. Allows adjusting resources without shutdown.'
+        ),
+      },
+      {
+        name: 'minimumCpu',
+        label: t('Minimum vCPUs'),
+        type: 'input-int',
+        min: 1,
+        hidden: !enableHotadd || isBareMetal,
+        required: enableHotadd && !isBareMetal,
+        tip: t(
+          'Minimum vCPU count at boot. Instances start with this many vCPUs and can scale up to the flavor max.'
+        ),
+      },
+      {
+        name: 'minimumMemoryGb',
+        label: t('Minimum Memory (GiB)'),
+        type: 'input-int',
+        min: 1,
+        hidden: !enableHotadd || isBareMetal,
+        required: enableHotadd && !isBareMetal,
+        tip: t(
+          'Minimum memory at boot in GiB. Instances start with this amount and can scale up to the flavor max.'
+        ),
       },
       {
         name: 'bandwidth',

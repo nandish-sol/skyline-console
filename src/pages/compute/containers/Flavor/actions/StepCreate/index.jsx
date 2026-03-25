@@ -123,6 +123,9 @@ export class StepCreate extends StepAction {
       resourceProps,
       traitProps,
       disk,
+      enableHotadd,
+      minimumCpu,
+      minimumMemoryGb,
     } = values;
     const body = {
       name,
@@ -189,6 +192,15 @@ export class StepCreate extends StepAction {
         const { value } = it;
         extraSpecs[`trait:${value}`] = 'required';
       });
+    }
+    // XLoud: Hot-add extra_specs
+    if (enableHotadd && !isBareMetal(architecture)) {
+      if (minimumCpu) {
+        extraSpecs.minimum_cpu = `${minimumCpu}`;
+      }
+      if (minimumMemoryGb) {
+        extraSpecs.minimum_memory = `${minimumMemoryGb * 1024}`;
+      }
     }
     return {
       body,
