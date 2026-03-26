@@ -1,21 +1,12 @@
-// Copyright 2021 99cloud
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 import React, { Component } from 'react';
-import { Card, Descriptions } from 'antd';
+import { Card, Tag, Avatar } from 'antd';
+import {
+  UserOutlined,
+  SafetyCertificateOutlined,
+  ClusterOutlined,
+  IdcardOutlined,
+} from '@ant-design/icons';
 import { inject, observer } from 'mobx-react';
-import styles from '../style.less';
 
 export class ProjectInfo extends Component {
   get rootStore() {
@@ -32,57 +23,150 @@ export class ProjectInfo extends Component {
     return roles;
   }
 
-  renderAccount() {
-    return (
-      <Descriptions.Item
-        label={t('User Account')}
-        labelStyle={{ fontSize: 14 }}
-        contentStyle={{ fontSize: 14 }}
-      >
-        {this.currentUser.name}
-      </Descriptions.Item>
-    );
-  }
-
-  renderRoles() {
-    return (
-      <Descriptions.Item
-        label={t('My Role')}
-        labelStyle={{ fontSize: 14 }}
-        contentStyle={{ fontSize: 14 }}
-      >
-        {this.roles.map((item) => item.name).join(', ')}
-      </Descriptions.Item>
-    );
-  }
-
-  renderDomain() {
-    return (
-      <Descriptions.Item
-        label={t('Affiliated Domain')}
-        labelStyle={{ fontSize: 14 }}
-        contentStyle={{ fontSize: 14 }}
-      >
-        {this.currentUser.domain.name}
-      </Descriptions.Item>
-    );
+  get project() {
+    const { user: { project } = {} } = this.rootStore;
+    return project || {};
   }
 
   render() {
     if (!this.currentUser.name) {
       return null;
     }
+
+    const headerStyle = {
+      background:
+        'linear-gradient(135deg, #0f4c3a 0%, #197560 50%, #2a9d8f 100%)',
+      borderRadius: '8px 8px 0 0',
+      padding: '24px',
+    };
+
+    const infoRow = {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '10px 0',
+      borderBottom: '1px solid #f5f5f5',
+      fontSize: 13,
+    };
+
+    const infoLabel = {
+      color: '#888',
+      width: 120,
+      flexShrink: 0,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+    };
+
+    const avatarUrl =
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem('xloud_avatar')
+        : null;
+
     return (
       <Card
-        className={styles.project}
-        title={t('Hello, {name}', { name: this.currentUser.name })}
         bordered={false}
+        bodyStyle={{ padding: 0 }}
+        style={{
+          borderRadius: 8,
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        }}
       >
-        <Descriptions column={1}>
-          {this.renderAccount()}
-          {this.renderRoles()}
-          {this.renderDomain()}
-        </Descriptions>
+        <div style={headerStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  flexShrink: 0,
+                }}
+                alt="avatar"
+              />
+            ) : (
+              <Avatar
+                size={56}
+                icon={<UserOutlined />}
+                style={{
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  background: 'rgba(255,255,255,0.15)',
+                  flexShrink: 0,
+                }}
+              />
+            )}
+            <div>
+              <div style={{ color: '#fff', fontSize: 20, fontWeight: 600 }}>
+                {this.currentUser.name}
+              </div>
+              <div style={{ marginTop: 6 }}>
+                {this.roles.map((r) => (
+                  <Tag
+                    key={r.id}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: '#fff',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {r.name}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px' }}>
+          <div style={infoRow}>
+            <span style={infoLabel}>
+              <UserOutlined /> {t('User Account')}
+            </span>
+            <span style={{ color: '#333', fontWeight: 500 }}>
+              {this.currentUser.name}
+            </span>
+          </div>
+          <div style={infoRow}>
+            <span style={infoLabel}>
+              <ClusterOutlined /> {t('Affiliated Domain')}
+            </span>
+            <span style={{ color: '#333', fontWeight: 500 }}>
+              {this.currentUser.domain
+                ? this.currentUser.domain.name
+                : 'Default'}
+            </span>
+          </div>
+          <div style={infoRow}>
+            <span style={infoLabel}>
+              <IdcardOutlined /> {t('Current Project')}
+            </span>
+            <span style={{ color: '#333', fontWeight: 500 }}>
+              {this.project.name || '-'}
+            </span>
+          </div>
+          <div style={{ ...infoRow, borderBottom: 'none' }}>
+            <span style={infoLabel}>
+              <SafetyCertificateOutlined /> {t('My Role')}
+            </span>
+            <span style={{ color: '#333', fontWeight: 500, flex: 1 }}>
+              {this.roles.map((r) => (
+                <Tag
+                  key={r.id}
+                  color="green"
+                  style={{ marginBottom: 2, borderRadius: 4, fontSize: 12 }}
+                >
+                  {r.name}
+                </Tag>
+              ))}
+            </span>
+          </div>
+        </div>
       </Card>
     );
   }

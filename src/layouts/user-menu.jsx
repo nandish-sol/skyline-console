@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React from 'react';
-import { HomeOutlined, UserOutlined } from '@ant-design/icons';
+import { HomeOutlined, UserOutlined, SettingOutlined } from '@ant-design/icons';
 
 const renderMenu = (t) => {
   if (!t) {
@@ -25,6 +25,15 @@ const renderMenu = (t) => {
       name: t('User Center'),
       key: 'userCenter',
       icon: <HomeOutlined />,
+      level: 0,
+      hasBreadcrumb: false,
+      hasChildren: false,
+    },
+    {
+      path: '/user/settings',
+      name: t('Profile Settings'),
+      key: 'profileSettings',
+      icon: <SettingOutlined />,
       level: 0,
       hasBreadcrumb: false,
       hasChildren: false,

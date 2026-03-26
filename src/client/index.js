@@ -30,6 +30,7 @@ import zun from './zun';
 import magnum from './magnum';
 import masakari from './masakari';
 import designate from './designate';
+import watcher from './watcher';
 
 const client = {
   skyline,
@@ -50,6 +51,7 @@ const client = {
   magnum,
   masakari,
   designate,
+  watcher,
 };
 
 window.client = client;

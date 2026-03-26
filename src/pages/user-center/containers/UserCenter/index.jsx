@@ -1,23 +1,8 @@
-// Copyright 2021 99cloud
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 import React, { Component } from 'react';
 import { inject, observer } from 'mobx-react';
-import { Row, Layout, Col, Avatar } from 'antd';
+import { Layout, Tag, Button } from 'antd';
+import { UserOutlined, EditOutlined } from '@ant-design/icons';
 import globalUserStore from 'stores/keystone/user';
-import ProfileIcon from 'asset/image/profile.svg';
-import classnames from 'classnames';
 import styles from './styles.less';
 
 export class Overview extends Component {
@@ -32,74 +17,152 @@ export class Overview extends Component {
     this.fetchData();
   }
 
+  get roles() {
+    const { roles = [] } = this.props.rootStore;
+    return roles;
+  }
+
+  get projectName() {
+    const { project: { name } = {} } = this.props.rootStore;
+    return name || '-';
+  }
+
+  get projectId() {
+    const { project: { id } = {} } = this.props.rootStore;
+    return id || '-';
+  }
+
   async fetchData() {
     const {
       user: { user },
     } = this.props.rootStore;
     const detail = await globalUserStore.pureFetchDetail({ id: user.id });
-    this.setState({
-      detail,
-    });
+    this.setState({ detail });
   }
 
-  renderInfoItem(item) {
-    return (
-      <Row className={styles['user-info-detail-item']}>
-        <Col span={6}>{item.label}</Col>
-        <Col span={18}>{item.value}</Col>
-      </Row>
-    );
-  }
-
-  renderUserInfo() {
+  renderHeader() {
     const { detail = {} } = this.state;
-    const data = {
-      [t('Username')]: detail.name || '-',
-      [t('Email')]: detail.email || '-',
-      [t('Phone')]: detail.phone || '-',
-      [t('Real Name')]: detail.real_name || '-',
-      [t('User ID')]: detail.id,
-    };
+    const name = detail.name || '-';
+    const email = detail.email || '';
+
     return (
-      <>
-        <Col
-          span={3}
-          className={classnames(styles.hvc, styles['user-info-avatar'])}
-        >
-          <Avatar
-            size={{ xs: 33, sm: 44, md: 55, lg: 88, xl: 110, xxl: 138 }}
-            src={ProfileIcon}
-          />
-        </Col>
-        <Col span={21}>
-          <Row className={styles['user-info-detail']}>
-            {Object.keys(data).map((item) => {
-              return (
-                <Col span={12} key={`user_info_detail_${item}`}>
-                  {this.renderInfoItem({
-                    label: item,
-                    value: data[item],
-                  })}
-                </Col>
-              );
-            })}
-          </Row>
-        </Col>
-      </>
+      <div className={styles['header-card']}>
+        <div className={styles['header-content']}>
+          <div className={styles.avatar}>
+            <UserOutlined />
+          </div>
+          <div className={styles['header-info']}>
+            <h2>{name}</h2>
+            {email && <div className={styles.email}>{email}</div>}
+            <div className={styles['role-tags']}>
+              {this.roles.map((role) => (
+                <Tag key={role.id}>{role.name}</Tag>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  renderExtra() {
-    return null;
+  renderStats() {
+    const { detail = {} } = this.state;
+    return (
+      <div className={styles['stats-row']}>
+        <div className={styles['stat-card']}>
+          <div className={styles['stat-value']}>{this.roles.length}</div>
+          <div className={styles['stat-label']}>{t('Roles')}</div>
+        </div>
+        <div className={styles['stat-card']}>
+          <div className={styles['stat-value']}>{detail.domain_id ? 1 : 0}</div>
+          <div className={styles['stat-label']}>{t('Domains')}</div>
+        </div>
+        <div className={styles['stat-card']}>
+          <div className={styles['stat-value']}>1</div>
+          <div className={styles['stat-label']}>{t('Projects')}</div>
+        </div>
+      </div>
+    );
+  }
+
+  renderInfoSection() {
+    const { detail = {} } = this.state;
+
+    return (
+      <div className={styles['info-section']}>
+        <div className={styles['info-card']}>
+          <h3>{t('Account Details')}</h3>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Username')}</span>
+            <span className={styles['info-value']}>{detail.name || '-'}</span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Email')}</span>
+            <span className={styles['info-value']}>{detail.email || '-'}</span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Phone')}</span>
+            <span className={styles['info-value']}>{detail.phone || '-'}</span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Real Name')}</span>
+            <span className={styles['info-value']}>
+              {detail.real_name || '-'}
+            </span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('User ID')}</span>
+            <span className={styles['info-value']}>{detail.id || '-'}</span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Current Project')}</span>
+            <span className={styles['info-value']}>{this.projectName}</span>
+          </div>
+          <Button
+            className={styles['edit-btn']}
+            type="primary"
+            icon={<EditOutlined />}
+            href="/user/settings"
+            style={{ background: '#197560', borderColor: '#197560' }}
+          >
+            {t('Edit Profile')}
+          </Button>
+        </div>
+        <div className={styles['info-card']}>
+          <h3>{t('Roles & Security')}</h3>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('My Roles')}</span>
+            <span className={styles['info-value']}>
+              {this.roles.map((r) => r.name).join(', ') || '-'}
+            </span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Domain')}</span>
+            <span className={styles['info-value']}>
+              {detail.domain_id || '-'}
+            </span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Project ID')}</span>
+            <span className={styles['info-value']}>{this.projectId}</span>
+          </div>
+          <div className={styles['info-row']}>
+            <span className={styles['info-label']}>{t('Account Status')}</span>
+            <span className={styles['info-value']}>
+              {detail.enabled !== false ? t('Active') : t('Disabled')}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   render() {
     return (
       <Layout.Content className={styles.content}>
-        <Row className={classnames(styles.bgc, styles['user-info-card'])}>
-          {this.renderUserInfo()}
-        </Row>
-        {this.renderExtra()}
+        {this.renderHeader()}
+        {this.renderStats()}
+        {this.renderInfoSection()}
       </Layout.Content>
     );
   }

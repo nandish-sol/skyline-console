@@ -62,6 +62,12 @@ const E404 = lazy(() =>
 const InstanceHA = lazy(() =>
   import(/* webpackChunkName: "Inctance-HA" */ 'pages/ha/App')
 );
+const InfraOptim = lazy(() =>
+  import(/* webpackChunkName: "infra-optim" */ 'pages/watcher/App')
+);
+const KeyManager = lazy(() =>
+  import(/* webpackChunkName: "key-manager" */ 'pages/barbican/App')
+);
 const PATH = '/';
 
 export default [
@@ -122,6 +128,14 @@ export default [
       {
         path: `/ha`,
         component: InstanceHA,
+      },
+      {
+        path: `/infra-optim`,
+        component: InfraOptim,
+      },
+      {
+        path: `/key-manager`,
+        component: KeyManager,
       },
       { path: '*', component: E404 },
     ],
