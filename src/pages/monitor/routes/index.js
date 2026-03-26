@@ -23,7 +23,6 @@ import OtherService from '../containers/OtherService';
 import Overview from '../containers/Overview';
 import Monitoring from '../containers/Monitoring';
 import Logging from '../containers/Logging';
-import SecurityPosture from '../containers/SecurityPosture';
 
 const PATH = '/monitor-center';
 export default [
@@ -70,11 +69,6 @@ export default [
       {
         path: `${PATH}/cluster-health-admin`,
         component: XAVSHealth,
-        exact: true,
-      },
-      {
-        path: `${PATH}/security-posture-admin`,
-        component: SecurityPosture,
         exact: true,
       },
       { path: '*', component: E404 },
