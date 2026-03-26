@@ -36,10 +36,10 @@ export class BlankLayout extends Component {
   }
 
   get title() {
-    const { title = { zh: 'Xconnect', en: 'Xconnect' } } = this.info;
+    const { title = { zh: 'XCONNECT', en: 'XCONNECT' } } = this.info;
     const { getLocaleShortName } = i18n;
     const language = getLocaleShortName();
-    return title[language] || 'Xconnect';
+    return title[language] || 'XCONNECT';
   }
 
   render() {

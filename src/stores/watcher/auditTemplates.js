@@ -12,13 +12,13 @@ export class AuditTemplateStore extends Base {
   }
 
   @action
-  async create(data) {
-    return this.submitting(this.client.create(data));
+  async create(newbody) {
+    return this.client.create(newbody);
   }
 
   @action
   async delete({ id }) {
-    return this.submitting(this.client.delete(id));
+    return this.client.delete(id);
   }
 
   @action
@@ -27,9 +27,10 @@ export class AuditTemplateStore extends Base {
       this.isLoading = true;
     }
     const result = await this.client.show(id);
-    this.detail = result;
+    const detail = result;
+    this.detail = detail;
     this.isLoading = false;
-    return result;
+    return detail;
   }
 }
 

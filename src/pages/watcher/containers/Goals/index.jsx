@@ -9,11 +9,7 @@ export class Goals extends Base {
   }
 
   get policy() {
-    return 'watcher:goal:get_all';
-  }
-
-  get name() {
-    return t('Goals');
+    return 'watcher:goal:get';
   }
 
   get endpoint() {
@@ -24,25 +20,39 @@ export class Goals extends Base {
     return true;
   }
 
+  get name() {
+    return t('Goals');
+  }
+
   get rowKey() {
     return 'uuid';
   }
 
-  getColumns = () => [
-    {
-      title: t('Name'),
-      dataIndex: 'name',
-      routeName: 'watcherGoalDetail',
-    },
-    {
-      title: t('Display Name'),
-      dataIndex: 'display_name',
-    },
-    {
-      title: t('UUID'),
-      dataIndex: 'uuid',
-    },
-  ];
+  getColumns() {
+    return [
+      {
+        title: t('Name'),
+        dataIndex: 'name',
+        routeName: this.getRouteName('watcherGoalDetail'),
+      },
+      {
+        title: t('Display Name'),
+        dataIndex: 'display_name',
+        isHideable: true,
+      },
+      {
+        title: t('Efficacy Specification'),
+        dataIndex: 'efficacy_specification',
+        isHideable: true,
+        render: (value) => {
+          if (Array.isArray(value)) {
+            return value.length;
+          }
+          return 0;
+        },
+      },
+    ];
+  }
 
   get searchFilters() {
     return [

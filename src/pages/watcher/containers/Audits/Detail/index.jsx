@@ -1,8 +1,8 @@
 import { inject, observer } from 'mobx-react';
 import Base from 'containers/TabDetail';
 import { AuditStore } from 'stores/watcher/audits';
-import BaseDetail from './BaseDetail';
 import actionConfigs from '../actions';
+import BaseDetail from './BaseDetail';
 
 export class AuditDetail extends Base {
   init() {
@@ -27,6 +27,10 @@ export class AuditDetail extends Base {
 
   get detailInfos() {
     return [
+      {
+        title: t('Name'),
+        dataIndex: 'name',
+      },
       {
         title: t('UUID'),
         dataIndex: 'uuid',

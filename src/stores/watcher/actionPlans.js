@@ -12,17 +12,13 @@ export class ActionPlanStore extends Base {
   }
 
   @action
-  async start({ id }) {
-    return this.submitting(
-      this.client.patch(id, [
-        { op: 'replace', path: '/state', value: 'TRIGGERED' },
-      ])
-    );
+  async start(id) {
+    return this.client.update(id, { state: 'TRIGGERED' });
   }
 
   @action
   async delete({ id }) {
-    return this.submitting(this.client.delete(id));
+    return this.client.delete(id);
   }
 
   @action
@@ -31,9 +27,10 @@ export class ActionPlanStore extends Base {
       this.isLoading = true;
     }
     const result = await this.client.show(id);
-    this.detail = result;
+    const detail = result;
+    this.detail = detail;
     this.isLoading = false;
-    return result;
+    return detail;
   }
 }
 

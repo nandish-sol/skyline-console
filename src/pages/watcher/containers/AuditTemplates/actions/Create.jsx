@@ -4,7 +4,7 @@ import globalAuditTemplateStore from 'stores/watcher/auditTemplates';
 import globalGoalStore from 'stores/watcher/goals';
 import globalStrategyStore from 'stores/watcher/strategies';
 
-export class Create extends ModalAction {
+export class CreateAuditTemplate extends ModalAction {
   static id = 'create-audit-template';
 
   static title = t('Create Audit Template');
@@ -17,26 +17,47 @@ export class Create extends ModalAction {
     this.store = globalAuditTemplateStore;
     this.goalStore = globalGoalStore;
     this.strategyStore = globalStrategyStore;
-    this.goalStore.fetchList();
-    this.strategyStore.fetchList();
+    this.state = {
+      goals: [],
+      strategies: [],
+    };
+    this.fetchGoals();
+    this.fetchStrategies();
+  }
+
+  async fetchGoals() {
+    const goals = await this.goalStore.fetchList();
+    this.setState({ goals });
+  }
+
+  async fetchStrategies() {
+    const strategies = await this.strategyStore.fetchList();
+    this.setState({ strategies });
   }
 
   get name() {
     return t('Create Audit Template');
   }
 
-  get goals() {
-    return (this.goalStore.list.data || []).map((item) => ({
-      label: item.display_name || item.name,
-      value: item.name,
+  get goalOptions() {
+    return (this.state.goals || []).map((goal) => ({
+      label: goal.display_name || goal.name,
+      value: goal.name,
     }));
   }
 
-  get strategies() {
-    return (this.strategyStore.list.data || []).map((item) => ({
-      label: item.display_name || item.name,
-      value: item.name,
+  get strategyOptions() {
+    return (this.state.strategies || []).map((strategy) => ({
+      label: strategy.display_name || strategy.name,
+      value: strategy.name,
     }));
+  }
+
+  get defaultValue() {
+    return {
+      name: '',
+      description: '',
+    };
   }
 
   get formItems() {
@@ -44,34 +65,52 @@ export class Create extends ModalAction {
       {
         name: 'name',
         label: t('Name'),
-        type: 'input',
+        type: 'input-name',
         required: true,
-      },
-      {
-        name: 'description',
-        label: t('Description'),
-        type: 'textarea',
+        withoutChinese: true,
       },
       {
         name: 'goal',
         label: t('Goal'),
         type: 'select',
-        options: this.goals,
+        options: this.goalOptions,
         required: true,
       },
       {
         name: 'strategy',
         label: t('Strategy'),
         type: 'select',
-        options: this.strategies,
-        required: true,
+        options: this.strategyOptions,
+        required: false,
+      },
+      {
+        name: 'description',
+        label: t('Description'),
+        type: 'textarea',
+        required: false,
+      },
+      {
+        name: 'scope',
+        label: t('Scope'),
+        type: 'textarea',
+        required: false,
+        placeholder: t('JSON format scope, e.g. []'),
       },
     ];
   }
 
   onSubmit = (values) => {
-    return this.store.create(values);
+    const { scope, ...rest } = values;
+    const body = { ...rest };
+    if (scope) {
+      try {
+        body.scope = JSON.parse(scope);
+      } catch (e) {
+        body.scope = scope;
+      }
+    }
+    return this.store.create(body);
   };
 }
 
-export default inject('rootStore')(observer(Create));
+export default inject('rootStore')(observer(CreateAuditTemplate));

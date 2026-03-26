@@ -1,8 +1,8 @@
 import { inject, observer } from 'mobx-react';
 import Base from 'containers/TabDetail';
 import { AuditTemplateStore } from 'stores/watcher/auditTemplates';
-import BaseDetail from './BaseDetail';
 import actionConfigs from '../actions';
+import BaseDetail from './BaseDetail';
 
 export class AuditTemplateDetail extends Base {
   init() {
@@ -36,12 +36,8 @@ export class AuditTemplateDetail extends Base {
         dataIndex: 'uuid',
       },
       {
-        title: t('Goal'),
+        title: t('Goal Name'),
         dataIndex: 'goal_name',
-      },
-      {
-        title: t('Strategy'),
-        dataIndex: 'strategy_name',
       },
     ];
   }

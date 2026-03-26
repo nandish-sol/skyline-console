@@ -9,11 +9,7 @@ export class Strategies extends Base {
   }
 
   get policy() {
-    return 'watcher:strategy:get_all';
-  }
-
-  get name() {
-    return t('Strategies');
+    return 'watcher:strategy:get';
   }
 
   get endpoint() {
@@ -24,25 +20,33 @@ export class Strategies extends Base {
     return true;
   }
 
+  get name() {
+    return t('Strategies');
+  }
+
   get rowKey() {
     return 'uuid';
   }
 
-  getColumns = () => [
-    {
-      title: t('Name'),
-      dataIndex: 'name',
-      routeName: 'watcherStrategyDetail',
-    },
-    {
-      title: t('Display Name'),
-      dataIndex: 'display_name',
-    },
-    {
-      title: t('UUID'),
-      dataIndex: 'uuid',
-    },
-  ];
+  getColumns() {
+    return [
+      {
+        title: t('Name'),
+        dataIndex: 'name',
+        routeName: this.getRouteName('watcherStrategyDetail'),
+      },
+      {
+        title: t('Display Name'),
+        dataIndex: 'display_name',
+        isHideable: true,
+      },
+      {
+        title: t('Goal Name'),
+        dataIndex: 'goal_name',
+        isHideable: true,
+      },
+    ];
+  }
 
   get searchFilters() {
     return [

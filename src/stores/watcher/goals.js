@@ -17,9 +17,10 @@ export class GoalStore extends Base {
       this.isLoading = true;
     }
     const result = await this.client.show(id);
-    this.detail = result;
+    const detail = result;
+    this.detail = detail;
     this.isLoading = false;
-    return result;
+    return detail;
   }
 }
 

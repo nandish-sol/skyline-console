@@ -1,10 +1,10 @@
-import React from 'react';
-import { inject, observer } from 'mobx-react';
 import Base from 'containers/BaseDetail';
+import { inject, observer } from 'mobx-react';
 
 export class BaseDetail extends Base {
   get leftCards() {
-    return [this.baseInfoCard];
+    const cards = [this.baseInfoCard];
+    return cards;
   }
 
   get baseInfoCard() {
@@ -18,22 +18,26 @@ export class BaseDetail extends Base {
         dataIndex: 'state',
       },
       {
-        label: t('Goal'),
+        label: t('Goal Name'),
         dataIndex: 'goal_name',
       },
       {
-        label: t('Strategy'),
+        label: t('Strategy Name'),
         dataIndex: 'strategy_name',
       },
       {
         label: t('Parameters'),
         dataIndex: 'parameters',
         render: (value) => {
-          if (value && typeof value === 'object') {
-            return <pre>{JSON.stringify(value, null, 2)}</pre>;
+          if (value) {
+            return JSON.stringify(value, null, 2);
           }
-          return value || '-';
+          return '-';
         },
+      },
+      {
+        label: t('Interval'),
+        dataIndex: 'interval',
       },
       {
         label: t('Created At'),
@@ -46,8 +50,9 @@ export class BaseDetail extends Base {
         valueRender: 'toLocalTime',
       },
     ];
+
     return {
-      title: t('Base Info'),
+      title: t('Audit Info'),
       options,
     };
   }

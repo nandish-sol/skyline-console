@@ -400,7 +400,6 @@ const renderMenu = (t) => {
           path: '/network/certificate',
           name: t('Certificates'),
           key: 'certificate',
-          endpoints: 'barbican',
           level: 1,
           children: [
             {
@@ -841,7 +840,6 @@ const renderMenu = (t) => {
       path: '/key-manager',
       name: t('Key Manager'),
       key: 'keyManager',
-      endpoints: 'barbican',
       icon: <LockOutlined />,
       children: [
         {
@@ -880,7 +878,6 @@ const renderMenu = (t) => {
       path: '/infra-optim',
       name: t('Infrastructure Optimization'),
       key: 'infraOptim',
-      endpoints: 'watcher',
       icon: <ThunderboltOutlined />,
       children: [
         {

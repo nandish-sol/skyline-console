@@ -9,11 +9,7 @@ export class Actions extends Base {
   }
 
   get policy() {
-    return 'watcher:action:get_all';
-  }
-
-  get name() {
-    return t('Actions');
+    return 'watcher:action:get';
   }
 
   get endpoint() {
@@ -24,35 +20,55 @@ export class Actions extends Base {
     return true;
   }
 
+  get name() {
+    return t('Actions');
+  }
+
   get rowKey() {
     return 'uuid';
   }
 
-  getColumns = () => [
-    {
-      title: t('UUID'),
-      dataIndex: 'uuid',
-      routeName: 'watcherActionDetail',
-    },
-    {
-      title: t('Action Type'),
-      dataIndex: 'action_type',
-    },
-    {
-      title: t('State'),
-      dataIndex: 'state',
-    },
-    {
-      title: t('Action Plan UUID'),
-      dataIndex: 'action_plan_uuid',
-    },
-  ];
+  getColumns() {
+    return [
+      {
+        title: t('UUID'),
+        dataIndex: 'uuid',
+        routeName: this.getRouteName('watcherActionDetail'),
+      },
+      {
+        title: t('Action Type'),
+        dataIndex: 'action_type',
+        isHideable: true,
+      },
+      {
+        title: t('State'),
+        dataIndex: 'state',
+        isHideable: true,
+      },
+      {
+        title: t('Action Plan UUID'),
+        dataIndex: 'action_plan_uuid',
+        isHideable: true,
+      },
+      {
+        title: t('Input Parameters'),
+        dataIndex: 'input_parameters',
+        isHideable: true,
+        render: (value) => {
+          if (value) {
+            return JSON.stringify(value);
+          }
+          return '-';
+        },
+      },
+    ];
+  }
 
   get searchFilters() {
     return [
       {
-        label: t('State'),
-        name: 'state',
+        label: t('Action Plan UUID'),
+        name: 'action_plan_uuid',
       },
     ];
   }

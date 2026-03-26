@@ -1,6 +1,5 @@
-import React from 'react';
-import { inject, observer } from 'mobx-react';
 import Base from 'containers/BaseDetail';
+import { inject, observer } from 'mobx-react';
 
 export class BaseDetail extends Base {
   get leftCards() {
@@ -19,14 +18,15 @@ export class BaseDetail extends Base {
         dataIndex: 'efficacy_specification',
         render: (value) => {
           if (Array.isArray(value)) {
-            return <pre>{JSON.stringify(value, null, 2)}</pre>;
+            return JSON.stringify(value, null, 2);
           }
-          return value || '-';
+          return '-';
         },
       },
     ];
+
     return {
-      title: t('Base Info'),
+      title: t('Goal Info'),
       options,
     };
   }

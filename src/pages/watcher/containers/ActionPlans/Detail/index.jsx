@@ -1,8 +1,8 @@
 import { inject, observer } from 'mobx-react';
 import Base from 'containers/TabDetail';
 import { ActionPlanStore } from 'stores/watcher/actionPlans';
-import BaseDetail from './BaseDetail';
 import actionConfigs from '../actions';
+import BaseDetail from './BaseDetail';
 
 export class ActionPlanDetail extends Base {
   init() {

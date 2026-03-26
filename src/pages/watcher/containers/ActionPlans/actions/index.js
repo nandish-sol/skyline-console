@@ -1,16 +1,17 @@
-import Start from './Start';
-import Delete from './Delete';
+import StartAction from './Start';
+import DeleteAction from './Delete';
 
 const actionConfigs = {
   rowActions: {
-    firstAction: Start,
+    firstAction: StartAction,
     moreActions: [
       {
-        action: Delete,
+        action: DeleteAction,
       },
     ],
   },
-  batchActions: [Delete],
+  batchActions: [DeleteAction],
+  primaryActions: [],
 };
 
 export default actionConfigs;

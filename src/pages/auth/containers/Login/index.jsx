@@ -63,10 +63,10 @@ export class Login extends Component {
   }
 
   get productName() {
-    const { product_name = { zh: 'Xconnect', en: 'Xconnect' } } = this.info;
+    const { product_name = { zh: 'XCONNECT', en: 'XCONNECT' } } = this.info;
     const { getLocaleShortName } = i18n;
     const language = getLocaleShortName();
-    const name = product_name[language] || 'Xconnect';
+    const name = product_name[language] || 'XCONNECT';
     return t('Welcome, {name}', { name });
   }
 

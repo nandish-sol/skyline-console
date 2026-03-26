@@ -1,7 +1,15 @@
 import { ConfirmAction } from 'containers/Action';
 import globalActionPlanStore from 'stores/watcher/actionPlans';
 
-export default class Start extends ConfirmAction {
+export default class StartAction extends ConfirmAction {
+  static policy = 'watcher:action_plan:update';
+
+  static allowed = (item) => {
+    return Promise.resolve(
+      item.state === 'RECOMMENDED' || item.state === 'PENDING'
+    );
+  };
+
   get id() {
     return 'start';
   }
@@ -11,19 +19,19 @@ export default class Start extends ConfirmAction {
   }
 
   get actionName() {
-    return t('Start Action Plan');
+    return t('start action plan');
   }
 
-  get buttonText() {
-    return t('Start');
-  }
+  confirmContext = (data) => {
+    const name = this.getName(data);
+    return t('Are you sure to {action} (Action Plan: {name})?', {
+      action: this.actionNameDisplay || this.title,
+      name,
+    });
+  };
 
-  policy = 'watcher:action_plan:update';
-
-  allowedCheckFunc = (item) => item.state === 'RECOMMENDED';
-
-  onSubmit = (item) => {
-    const { uuid } = item;
-    return globalActionPlanStore.start({ id: uuid });
+  onSubmit = (data) => {
+    const { uuid } = data;
+    return globalActionPlanStore.start(uuid);
   };
 }

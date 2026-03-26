@@ -1,39 +1,50 @@
-import React from 'react';
-import { inject, observer } from 'mobx-react';
 import Base from 'containers/BaseDetail';
+import { inject, observer } from 'mobx-react';
 
 export class BaseDetail extends Base {
   get leftCards() {
-    return [this.baseInfoCard];
+    const cards = [this.baseInfoCard];
+    return cards;
   }
 
   get baseInfoCard() {
     const options = [
       {
-        label: t('Description'),
-        dataIndex: 'description',
+        label: t('Strategy Name'),
+        dataIndex: 'strategy_name',
       },
       {
-        label: t('Goal'),
+        label: t('Goal Name'),
         dataIndex: 'goal_name',
       },
       {
-        label: t('Strategy'),
-        dataIndex: 'strategy_name',
+        label: t('Description'),
+        dataIndex: 'description',
       },
       {
         label: t('Scope'),
         dataIndex: 'scope',
         render: (value) => {
-          if (value && typeof value === 'object') {
-            return <pre>{JSON.stringify(value, null, 2)}</pre>;
+          if (value) {
+            return JSON.stringify(value, null, 2);
           }
-          return value || '-';
+          return '-';
         },
       },
+      {
+        label: t('Created At'),
+        dataIndex: 'created_at',
+        valueRender: 'toLocalTime',
+      },
+      {
+        label: t('Updated At'),
+        dataIndex: 'updated_at',
+        valueRender: 'toLocalTime',
+      },
     ];
+
     return {
-      title: t('Base Info'),
+      title: t('Audit Template Info'),
       options,
     };
   }

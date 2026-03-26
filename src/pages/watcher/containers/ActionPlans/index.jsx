@@ -10,11 +10,7 @@ export class ActionPlans extends Base {
   }
 
   get policy() {
-    return 'watcher:action_plan:get_all';
-  }
-
-  get name() {
-    return t('Action Plans');
+    return 'watcher:action_plan:get';
   }
 
   get endpoint() {
@@ -25,6 +21,10 @@ export class ActionPlans extends Base {
     return true;
   }
 
+  get name() {
+    return t('Action Plans');
+  }
+
   get rowKey() {
     return 'uuid';
   }
@@ -33,42 +33,48 @@ export class ActionPlans extends Base {
     return actionConfigs;
   }
 
-  getColumns = () => [
-    {
-      title: t('UUID'),
-      dataIndex: 'uuid',
-      routeName: 'watcherActionPlanDetail',
-    },
-    {
-      title: t('State'),
-      dataIndex: 'state',
-    },
-    {
-      title: t('Audit UUID'),
-      dataIndex: 'audit_uuid',
-    },
-    {
-      title: t('Global Efficacy'),
-      dataIndex: 'global_efficacy',
-      render: (value) => {
-        if (value && typeof value === 'object') {
-          return JSON.stringify(value);
-        }
-        return value || '-';
+  getColumns() {
+    return [
+      {
+        title: t('UUID'),
+        dataIndex: 'uuid',
+        routeName: this.getRouteName('watcherActionPlanDetail'),
       },
-    },
-    {
-      title: t('Created At'),
-      dataIndex: 'created_at',
-      valueRender: 'toLocalTime',
-    },
-  ];
+      {
+        title: t('Audit UUID'),
+        dataIndex: 'audit_uuid',
+        isHideable: true,
+      },
+      {
+        title: t('State'),
+        dataIndex: 'state',
+        isHideable: true,
+      },
+      {
+        title: t('Global Efficacy'),
+        dataIndex: 'global_efficacy',
+        isHideable: true,
+        render: (value) => {
+          if (value) {
+            return JSON.stringify(value);
+          }
+          return '-';
+        },
+      },
+      {
+        title: t('Created At'),
+        dataIndex: 'created_at',
+        valueRender: 'toLocalTime',
+        isHideable: true,
+      },
+    ];
+  }
 
   get searchFilters() {
     return [
       {
-        label: t('State'),
-        name: 'state',
+        label: t('Audit UUID'),
+        name: 'audit_uuid',
       },
     ];
   }

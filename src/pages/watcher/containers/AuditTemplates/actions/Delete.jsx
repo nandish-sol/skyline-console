@@ -1,7 +1,11 @@
 import { ConfirmAction } from 'containers/Action';
 import globalAuditTemplateStore from 'stores/watcher/auditTemplates';
 
-export default class Delete extends ConfirmAction {
+export default class DeleteAction extends ConfirmAction {
+  static policy = 'watcher:audit_template:delete';
+
+  static allowed = () => Promise.resolve(true);
+
   get id() {
     return 'delete';
   }
@@ -10,24 +14,20 @@ export default class Delete extends ConfirmAction {
     return t('Delete Audit Template');
   }
 
-  get actionName() {
-    return t('Delete Audit Template');
+  get isDanger() {
+    return true;
   }
 
   get buttonText() {
     return t('Delete');
   }
 
-  get isDanger() {
-    return true;
+  get actionName() {
+    return t('delete audit template');
   }
 
-  policy = 'watcher:audit_template:delete';
-
-  allowedCheckFunc = () => true;
-
-  onSubmit = (item) => {
-    const { uuid } = item;
+  onSubmit = (data) => {
+    const { uuid } = data;
     return globalAuditTemplateStore.delete({ id: uuid });
   };
 }

@@ -10,11 +10,7 @@ export class Audits extends Base {
   }
 
   get policy() {
-    return 'watcher:audit:get_all';
-  }
-
-  get name() {
-    return t('Audits');
+    return 'watcher:audit:get';
   }
 
   get endpoint() {
@@ -25,6 +21,10 @@ export class Audits extends Base {
     return true;
   }
 
+  get name() {
+    return t('Audits');
+  }
+
   get rowKey() {
     return 'uuid';
   }
@@ -33,35 +33,47 @@ export class Audits extends Base {
     return actionConfigs;
   }
 
-  getColumns = () => [
-    {
-      title: t('UUID'),
-      dataIndex: 'uuid',
-      routeName: 'watcherAuditDetail',
-    },
-    {
-      title: t('Audit Type'),
-      dataIndex: 'audit_type',
-    },
-    {
-      title: t('State'),
-      dataIndex: 'state',
-    },
-    {
-      title: t('Goal'),
-      dataIndex: 'goal_name',
-    },
-    {
-      title: t('Strategy'),
-      dataIndex: 'strategy_name',
-    },
-  ];
+  getColumns() {
+    return [
+      {
+        title: t('Name'),
+        dataIndex: 'name',
+        routeName: this.getRouteName('watcherAuditDetail'),
+      },
+      {
+        title: t('Audit Type'),
+        dataIndex: 'audit_type',
+        isHideable: true,
+      },
+      {
+        title: t('State'),
+        dataIndex: 'state',
+        isHideable: true,
+      },
+      {
+        title: t('Goal Name'),
+        dataIndex: 'goal_name',
+        isHideable: true,
+      },
+      {
+        title: t('Strategy Name'),
+        dataIndex: 'strategy_name',
+        isHideable: true,
+      },
+      {
+        title: t('Created At'),
+        dataIndex: 'created_at',
+        valueRender: 'toLocalTime',
+        isHideable: true,
+      },
+    ];
+  }
 
   get searchFilters() {
     return [
       {
-        label: t('State'),
-        name: 'state',
+        label: t('Name'),
+        name: 'name',
       },
     ];
   }
