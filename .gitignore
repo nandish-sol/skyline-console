@@ -37,3 +37,9 @@ venv/
 ENV/
 build/
 .tox
+
+# Backup and temp files
+*.bak
+avs-card-svg-1.svg
+xconnect-new 1.svg
+BP-048-SKYLINE-RBAC-MANAGEMENT.md
