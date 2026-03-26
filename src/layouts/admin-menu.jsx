@@ -766,6 +766,13 @@ const renderMenu = (t) => {
             },
           ],
         },
+        {
+          path: '/identity/rbac-admin',
+          name: t('RBAC Management'),
+          key: 'rbacManagementAdmin',
+          level: 1,
+          children: [],
+        },
       ],
     },
     // {
