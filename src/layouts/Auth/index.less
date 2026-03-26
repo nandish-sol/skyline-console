@@ -53,9 +53,11 @@
 
   .right {
     position: relative;
+    display: flex;
     flex: 1 1;
-    text-align: center;
-    background-color: #21242a;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0a8f6c 0%, #06705a 50%, #044d3e 100%);
   }
 }
 
@@ -64,20 +66,16 @@
 }
 
 .login-full-image {
-  width: 100%;
-  height: 100%;
+  width: 70%;
+  max-width: 500px;
+  height: auto;
+  object-fit: contain;
 }
 
 .full-image-front {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background-color: rgba(14, 34, 181, 15%);
+  display: none;
 }
 
 .login-right-logo {
-  position: relative;
-  top: -100px;
+  display: none;
 }

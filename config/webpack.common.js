@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const crypto = require('crypto'); // eslint-disable-line import/order
 const webpack = require('webpack');
 const { normalize, resolve } = require('path');
 // const path = require("path");
@@ -23,9 +24,9 @@ const root = (path) => resolve(__dirname, `../${path}`);
 const version = moment().unix();
 
 // (jamesdenton) Remove once libs no longer hardcode the hashing algorithm
-const crypto = require("crypto");
-const crypto_orig_createHash = crypto.createHash;
-crypto.createHash = algorithm => crypto_orig_createHash(algorithm == "md4" ? "md5" : algorithm);
+const crypto_orig_createHash = crypto.createHash; // eslint-disable-line camelcase
+crypto.createHash = (algorithm) =>
+  crypto_orig_createHash(algorithm === 'md4' ? 'md5' : algorithm);
 
 module.exports = {
   module: {
@@ -88,8 +89,9 @@ module.exports = {
           },
         ],
         include: [
+          root('src/asset/image/login-full.svg'),
+          root('src/asset/image/xconnect-logo.svg'),
           root('src/asset/image/cloud-logo.svg'),
-          root('src/asset/image/cloud-logo-white.svg'),
         ],
       },
       {
@@ -104,8 +106,9 @@ module.exports = {
           },
         ],
         exclude: [
+          root('src/asset/image/login-full.svg'),
+          root('src/asset/image/xconnect-logo.svg'),
           root('src/asset/image/cloud-logo.svg'),
-          root('src/asset/image/cloud-logo-white.svg'),
         ],
       },
     ],
