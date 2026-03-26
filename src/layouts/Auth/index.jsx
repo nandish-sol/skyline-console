@@ -17,9 +17,9 @@ import { inject, observer } from 'mobx-react';
 import renderRoutes from 'utils/RouterConfig';
 import SelectLang from 'components/SelectLang';
 
-import logo from 'asset/image/cloud-logo.svg';
-import loginFullImage from 'asset/image/xloud-bg-login.png';
-import loginRightLogo from 'asset/image/xloud-tech-logo.png';
+import logo from 'asset/image/logo.png';
+import loginFullImage from 'asset/image/login-full.png';
+import loginRightLogo from 'asset/image/loginRightLogo.png';
 import styles from './index.less';
 
 export class AuthLayout extends Component {
