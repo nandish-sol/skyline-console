@@ -8,12 +8,9 @@
 
   .left {
     position: relative;
+    order: 2;
     width: 576px;
     overflow-y: auto;
-
-    /* TODO wait for RGB
-    // background: rgb(253, 249, 252) no-repeat fixed left bottom;
-    // background-size: 556px; */
 
     .lang {
       position: absolute;
@@ -25,7 +22,7 @@
     }
 
     .main {
-      margin-top: 10vh;
+      margin-top: 25vh;
       padding: 0 130px;
 
       .top {
@@ -41,7 +38,6 @@
           }
 
           .logo {
-            //width: 87px;
             height: 56px;
             margin-right: 16px;
             vertical-align: top;
@@ -57,7 +53,8 @@
     flex: 1 1;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0a8f6c 0%, #06705a 50%, #044d3e 100%);
+    order: 1;
+    background: linear-gradient(135deg, #2ec4a0 0%, #1aad8a 40%, #0d9674 100%);
   }
 }
 
@@ -66,8 +63,8 @@
 }
 
 .login-full-image {
-  width: 70%;
-  max-width: 500px;
+  width: 85%;
+  max-width: 650px;
   height: auto;
   object-fit: contain;
 }
