@@ -38,6 +38,9 @@ ENV/
 build/
 .tox
 
+# Build output
+skyline_console/static/
+
 # Backup and temp files
 *.bak
 avs-card-svg-1.svg
