@@ -1,7 +1,6 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalGoalStore from 'stores/watcher/goals';
-import { watcherEndpoint } from 'client/client/constants';
 
 export class Goals extends Base {
   init() {
@@ -10,14 +9,6 @@ export class Goals extends Base {
 
   get policy() {
     return 'watcher:goal:get';
-  }
-
-  get endpoint() {
-    return watcherEndpoint();
-  }
-
-  get checkEndpoint() {
-    return true;
   }
 
   get name() {

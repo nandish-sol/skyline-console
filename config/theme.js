@@ -14,7 +14,7 @@
 
 module.exports = {
   // XLoud brand colors
-  'primary-color': '#1A1A2E',
+  'primary-color': '#0068FF',
   'link-color': '#0068FF',
   'link-hover-color': '#005ADE',
   'success-color': '#52C41A',
