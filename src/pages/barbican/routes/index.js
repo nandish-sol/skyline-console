@@ -12,14 +12,26 @@ export default [
     component: BaseLayout,
     routes: [
       { path: `${PATH}/secrets`, component: Secrets, exact: true },
+      { path: `${PATH}/secrets-admin`, component: Secrets, exact: true },
       {
         path: `${PATH}/secrets/detail/:id`,
         component: SecretDetail,
         exact: true,
       },
+      {
+        path: `${PATH}/secrets-admin/detail/:id`,
+        component: SecretDetail,
+        exact: true,
+      },
       { path: `${PATH}/containers`, component: Containers, exact: true },
+      { path: `${PATH}/containers-admin`, component: Containers, exact: true },
       {
         path: `${PATH}/containers/detail/:id`,
+        component: ContainerDetail,
+        exact: true,
+      },
+      {
+        path: `${PATH}/containers-admin/detail/:id`,
         component: ContainerDetail,
         exact: true,
       },

@@ -952,32 +952,32 @@ const renderMenu = (t) => {
       icon: <LockOutlined />,
       children: [
         {
-          path: '/key-manager/secrets',
+          path: '/key-manager/secrets-admin',
           name: t('Secrets'),
           key: 'barbicanSecretsAdmin',
           level: 1,
           children: [
             {
-              path: /^\/key-manager\/secrets\/detail\/.[^/]+$/,
+              path: /^\/key-manager\/secrets-admin\/detail\/.[^/]+$/,
               name: t('Secret Detail'),
               key: 'barbicanSecretDetailAdmin',
               level: 2,
-              routePath: '/key-manager/secrets/detail/:id',
+              routePath: '/key-manager/secrets-admin/detail/:id',
             },
           ],
         },
         {
-          path: '/key-manager/containers',
+          path: '/key-manager/containers-admin',
           name: t('Containers'),
           key: 'barbicanContainersAdmin',
           level: 1,
           children: [
             {
-              path: /^\/key-manager\/containers\/detail\/.[^/]+$/,
+              path: /^\/key-manager\/containers-admin\/detail\/.[^/]+$/,
               name: t('Container Detail'),
               key: 'barbicanContainerDetailAdmin',
               level: 2,
-              routePath: '/key-manager/containers/detail/:id',
+              routePath: '/key-manager/containers-admin/detail/:id',
             },
           ],
         },
