@@ -35,6 +35,12 @@ export class MasakariClient extends Base {
         name: 'notifications',
         key: 'notifications',
         responseKey: 'notification',
+        subResources: [
+          {
+            key: 'vmoves',
+            responseKey: 'vmove',
+          },
+        ],
       },
     ];
   }

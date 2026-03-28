@@ -12,12 +12,29 @@
 
 import React from 'react';
 import { observer, inject } from 'mobx-react';
+import { Tag } from 'antd';
 import Base from 'containers/List';
 import globalNotificationStore, {
   NotificationStore,
 } from 'stores/masakari/notifications';
 import { Link } from 'react-router-dom';
 import { masakariEndpoint } from 'client/client/constants';
+
+const STATUS_MAP = {
+  new: { color: 'blue', text: 'New' },
+  running: { color: 'orange', text: 'Running' },
+  finished: { color: 'green', text: 'Finished' },
+  error: { color: 'red', text: 'Error' },
+  failed: { color: 'red', text: 'Failed' },
+  ignored: { color: 'default', text: 'Ignored' },
+};
+
+const TYPE_COLOR = {
+  COMPUTE_HOST: 'red',
+  VM: 'orange',
+  PROCESS: 'blue',
+  pacemaker: 'purple',
+};
 
 export class Notifications extends Base {
   init() {
@@ -33,7 +50,7 @@ export class Notifications extends Base {
   }
 
   get name() {
-    return t('segments');
+    return t('Notifications');
   }
 
   get defaultSortKey() {
@@ -58,6 +75,26 @@ export class Notifications extends Base {
         label: t('UUID'),
         name: 'notification_uuid',
       },
+      {
+        label: t('Status'),
+        name: 'status',
+        options: [
+          { label: t('New'), key: 'new' },
+          { label: t('Running'), key: 'running' },
+          { label: t('Finished'), key: 'finished' },
+          { label: t('Error'), key: 'error' },
+          { label: t('Failed'), key: 'failed' },
+        ],
+      },
+      {
+        label: t('Type'),
+        name: 'type',
+        options: [
+          { label: t('Compute Host'), key: 'COMPUTE_HOST' },
+          { label: t('VM'), key: 'VM' },
+          { label: t('Process'), key: 'PROCESS' },
+        ],
+      },
     ];
   }
 
@@ -71,33 +108,39 @@ export class Notifications extends Base {
         });
         return <Link to={path}>{value}</Link>;
       },
-      isHideable: true,
     },
     {
-      title: t('Host'),
+      title: t('Source Host'),
       dataIndex: 'source_host_uuid',
       isHideable: true,
+      copyable: true,
     },
     {
       title: t('Type'),
       dataIndex: 'type',
       isHideable: true,
+      render: (val) => <Tag color={TYPE_COLOR[val] || 'default'}>{val}</Tag>,
     },
     {
       title: t('Status'),
       dataIndex: 'status',
       isHideable: true,
+      render: (val) => {
+        const item = STATUS_MAP[val] || { color: 'default', text: val };
+        return <Tag color={item.color}>{item.text}</Tag>;
+      },
     },
     {
-      title: t('Payload'),
-      dataIndex: 'payload',
+      title: t('Generated Time'),
+      dataIndex: 'generated_time',
       isHideable: true,
-      render: (value) =>
-        Object.keys(value).map((it) => (
-          <div key={it}>
-            {it}: {value[it]}
-          </div>
-        )),
+      valueRender: 'toLocalTime',
+    },
+    {
+      title: t('Updated At'),
+      dataIndex: 'updated_at',
+      isHideable: true,
+      valueRender: 'toLocalTime',
     },
   ];
 }

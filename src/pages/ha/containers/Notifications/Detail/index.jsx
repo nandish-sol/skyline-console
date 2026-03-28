@@ -10,10 +10,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import React from 'react';
 import { inject, observer } from 'mobx-react';
+import { Tag } from 'antd';
 import Base from 'containers/TabDetail';
 import globalNotificationStore from 'stores/masakari/notifications';
 import BaseDetail from './BaseDetail';
+import RecoveryProgress from './RecoveryProgress';
+
+const STATUS_COLOR = {
+  new: 'blue',
+  running: 'orange',
+  finished: 'green',
+  error: 'red',
+  failed: 'red',
+  ignored: 'default',
+};
 
 export class NotificationsDetail extends Base {
   init() {
@@ -21,7 +33,7 @@ export class NotificationsDetail extends Base {
   }
 
   get name() {
-    return t('Host Detail');
+    return t('Notification Detail');
   }
 
   get listUrl() {
@@ -37,10 +49,14 @@ export class NotificationsDetail extends Base {
       {
         title: t('Type'),
         dataIndex: 'type',
+        render: (val) => <Tag color="blue">{val}</Tag>,
       },
       {
         title: t('Status'),
         dataIndex: 'status',
+        render: (val) => (
+          <Tag color={STATUS_COLOR[val] || 'default'}>{val}</Tag>
+        ),
       },
     ];
   }
@@ -51,6 +67,11 @@ export class NotificationsDetail extends Base {
         title: t('Detail'),
         key: 'baseDetail',
         component: BaseDetail,
+      },
+      {
+        title: t('Recovery Progress'),
+        key: 'recoveryProgress',
+        component: RecoveryProgress,
       },
     ];
   }

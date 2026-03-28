@@ -15,6 +15,10 @@ export class StrategyStore extends Base {
     return 'strategies';
   }
 
+  get needGetProject() {
+    return false;
+  }
+
   get paramsFunc() {
     return (params) => {
       const { all_projects, current, limit, ...rest } = params;

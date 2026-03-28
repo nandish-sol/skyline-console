@@ -15,6 +15,10 @@ export class AuditStore extends Base {
     return 'audits';
   }
 
+  get needGetProject() {
+    return false;
+  }
+
   get paramsFunc() {
     return (params) => {
       const { all_projects, current, limit, ...rest } = params;

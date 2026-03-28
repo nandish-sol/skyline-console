@@ -15,6 +15,10 @@ export class ActionStore extends Base {
     return 'actions';
   }
 
+  get needGetProject() {
+    return false;
+  }
+
   get paramsFunc() {
     return (params) => {
       const { all_projects, current, limit, ...rest } = params;

@@ -15,20 +15,33 @@ import { inject, observer } from 'mobx-react';
 
 export class BaseDetail extends Base {
   get leftCards() {
-    const cards = [this.baseInfoCard, this.payloadCard];
+    const cards = [this.baseInfoCard];
     return cards;
+  }
+
+  get rightCards() {
+    return [this.payloadCard];
   }
 
   get baseInfoCard() {
     const options = [
       {
-        label: t('ID'),
-        dataIndex: 'id',
+        label: t('Notification UUID'),
+        dataIndex: 'notification_uuid',
+        copyable: true,
       },
       {
-        label: t('Host'),
+        label: t('Source Host'),
         dataIndex: 'source_host_uuid',
         copyable: true,
+      },
+      {
+        label: t('Type'),
+        dataIndex: 'type',
+      },
+      {
+        label: t('Status'),
+        dataIndex: 'status',
       },
       {
         label: t('Generated Time'),
@@ -54,24 +67,15 @@ export class BaseDetail extends Base {
   }
 
   get payloadCard() {
-    const options = [
-      {
-        label: t('Event'),
-        dataIndex: 'event',
-      },
-      {
-        label: t('Instance UUID'),
-        dataIndex: 'instance_uuid',
-      },
-      {
-        label: t('VIR Domain Event'),
-        dataIndex: 'vir_domain_event',
-      },
-    ];
+    const payload = (this.detailData && this.detailData.payload) || {};
+    const options = Object.keys(payload).map((key) => ({
+      label: key,
+      dataIndex: key,
+    }));
 
     return {
       title: t('Payload'),
-      sourceData: this.detailData.payload,
+      sourceData: payload,
       options,
     };
   }

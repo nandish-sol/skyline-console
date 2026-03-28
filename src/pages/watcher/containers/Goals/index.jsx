@@ -7,6 +7,10 @@ export class Goals extends Base {
     this.store = globalGoalStore;
   }
 
+  get isFilterByBackend() {
+    return true;
+  }
+
   get name() {
     return t('Goals');
   }
