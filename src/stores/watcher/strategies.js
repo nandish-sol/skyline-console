@@ -11,6 +11,15 @@ export class StrategyStore extends Base {
     return 'uuid';
   }
 
+  paramsFuncPage = (params) => {
+    const { current, ...rest } = params;
+    return rest;
+  };
+
+  async getCountForPage(newParams, newData) {
+    return { count: newData.length };
+  }
+
   @action
   async fetchDetail({ id, silent }) {
     if (!silent) {

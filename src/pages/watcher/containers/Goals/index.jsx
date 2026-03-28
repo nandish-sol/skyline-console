@@ -7,10 +7,6 @@ export class Goals extends Base {
     this.store = globalGoalStore;
   }
 
-  get policy() {
-    return 'watcher:goal:get';
-  }
-
   get name() {
     return t('Goals');
   }

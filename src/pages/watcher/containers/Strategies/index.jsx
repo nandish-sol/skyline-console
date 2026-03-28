@@ -7,10 +7,6 @@ export class Strategies extends Base {
     this.store = globalStrategyStore;
   }
 
-  get policy() {
-    return 'watcher:strategy:get';
-  }
-
   get name() {
     return t('Strategies');
   }

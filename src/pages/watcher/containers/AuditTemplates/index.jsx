@@ -8,10 +8,6 @@ export class AuditTemplates extends Base {
     this.store = globalAuditTemplateStore;
   }
 
-  get policy() {
-    return 'watcher:audit_template:get';
-  }
-
   get name() {
     return t('Audit Templates');
   }

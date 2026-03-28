@@ -8,10 +8,6 @@ export class Audits extends Base {
     this.store = globalAuditStore;
   }
 
-  get policy() {
-    return 'watcher:audit:get';
-  }
-
   get name() {
     return t('Audits');
   }

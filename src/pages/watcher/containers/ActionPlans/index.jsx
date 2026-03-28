@@ -8,10 +8,6 @@ export class ActionPlans extends Base {
     this.store = globalActionPlanStore;
   }
 
-  get policy() {
-    return 'watcher:action_plan:get';
-  }
-
   get name() {
     return t('Action Plans');
   }

@@ -7,10 +7,6 @@ export class Actions extends Base {
     this.store = globalActionStore;
   }
 
-  get policy() {
-    return 'watcher:action:get';
-  }
-
   get name() {
     return t('Actions');
   }

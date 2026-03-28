@@ -11,6 +11,15 @@ export class AuditStore extends Base {
     return 'uuid';
   }
 
+  paramsFuncPage = (params) => {
+    const { current, ...rest } = params;
+    return rest;
+  };
+
+  async getCountForPage(newParams, newData) {
+    return { count: newData.length };
+  }
+
   @action
   async create(newbody) {
     return this.client.create(newbody);
