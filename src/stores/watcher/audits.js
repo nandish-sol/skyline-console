@@ -11,10 +11,23 @@ export class AuditStore extends Base {
     return 'uuid';
   }
 
-  paramsFuncPage = (params) => {
-    const { current, ...rest } = params;
-    return rest;
-  };
+  get listResponseKey() {
+    return 'audits';
+  }
+
+  get paramsFunc() {
+    return (params) => {
+      const { all_projects, current, limit, ...rest } = params;
+      return rest;
+    };
+  }
+
+  get paramsFuncPage() {
+    return (params) => {
+      const { all_projects, current, limit, ...rest } = params;
+      return rest;
+    };
+  }
 
   async getCountForPage(newParams, newData) {
     return { count: newData.length };
