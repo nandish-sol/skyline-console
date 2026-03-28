@@ -1,13 +1,18 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalGoalStore from 'stores/watcher/goals';
+import { watcherEndpoint } from 'client/client/constants';
 
 export class Goals extends Base {
   init() {
     this.store = globalGoalStore;
   }
 
-  get isFilterByBackend() {
+  get endpoint() {
+    return watcherEndpoint();
+  }
+
+  get checkEndpoint() {
     return true;
   }
 

@@ -1,10 +1,19 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalStrategyStore from 'stores/watcher/strategies';
+import { watcherEndpoint } from 'client/client/constants';
 
 export class Strategies extends Base {
   init() {
     this.store = globalStrategyStore;
+  }
+
+  get endpoint() {
+    return watcherEndpoint();
+  }
+
+  get checkEndpoint() {
+    return true;
   }
 
   get name() {

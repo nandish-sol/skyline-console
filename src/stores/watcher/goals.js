@@ -11,30 +11,6 @@ export class GoalStore extends Base {
     return 'uuid';
   }
 
-  get listResponseKey() {
-    return 'goals';
-  }
-
-  get needGetProject() {
-    return false;
-  }
-
-  get filterByApi() {
-    return true;
-  }
-
-  updateParamsSortPage = (params) => params;
-
-  paramsFuncPage = (params) => {
-    // eslint-disable-next-line no-unused-vars
-    const { all_projects, current, ...rest } = params;
-    return rest;
-  };
-
-  async getCountForPage(newParams, newData) {
-    return { count: newData.length };
-  }
-
   @action
   async fetchDetail({ id, silent }) {
     if (!silent) {

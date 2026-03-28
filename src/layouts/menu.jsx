@@ -24,6 +24,7 @@ import {
   SwitcherOutlined,
   ContainerOutlined,
   LockOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 
 const renderMenu = (t) => {
@@ -868,6 +869,104 @@ const renderMenu = (t) => {
               key: 'barbicanContainerDetail',
               level: 2,
               routePath: '/key-manager/containers/detail/:id',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      path: '/infra-optim',
+      name: t('Infrastructure Optimization'),
+      key: 'infraOptim',
+      icon: <ThunderboltOutlined />,
+      children: [
+        {
+          path: '/infra-optim/goals',
+          name: t('Goals'),
+          key: 'watcherGoals',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/goals\/detail\/.[^/]+$/,
+              name: t('Goal Detail'),
+              key: 'watcherGoalDetail',
+              level: 2,
+              routePath: '/infra-optim/goals/detail/:id',
+            },
+          ],
+        },
+        {
+          path: '/infra-optim/strategies',
+          name: t('Strategies'),
+          key: 'watcherStrategies',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/strategies\/detail\/.[^/]+$/,
+              name: t('Strategy Detail'),
+              key: 'watcherStrategyDetail',
+              level: 2,
+              routePath: '/infra-optim/strategies/detail/:id',
+            },
+          ],
+        },
+        {
+          path: '/infra-optim/audit-templates',
+          name: t('Audit Templates'),
+          key: 'watcherAuditTemplates',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/audit-templates\/detail\/.[^/]+$/,
+              name: t('Audit Template Detail'),
+              key: 'watcherAuditTemplateDetail',
+              level: 2,
+              routePath: '/infra-optim/audit-templates/detail/:id',
+            },
+          ],
+        },
+        {
+          path: '/infra-optim/audits',
+          name: t('Audits'),
+          key: 'watcherAudits',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/audits\/detail\/.[^/]+$/,
+              name: t('Audit Detail'),
+              key: 'watcherAuditDetail',
+              level: 2,
+              routePath: '/infra-optim/audits/detail/:id',
+            },
+          ],
+        },
+        {
+          path: '/infra-optim/action-plans',
+          name: t('Action Plans'),
+          key: 'watcherActionPlans',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/action-plans\/detail\/.[^/]+$/,
+              name: t('Action Plan Detail'),
+              key: 'watcherActionPlanDetail',
+              level: 2,
+              routePath: '/infra-optim/action-plans/detail/:id',
+            },
+          ],
+        },
+        {
+          path: '/infra-optim/actions',
+          name: t('Actions'),
+          key: 'watcherActions',
+          level: 1,
+          children: [
+            {
+              path: /^\/infra-optim\/actions\/detail\/.[^/]+$/,
+              name: t('Action Detail'),
+              key: 'watcherActionDetail',
+              level: 2,
+              routePath: '/infra-optim/actions/detail/:id',
             },
           ],
         },

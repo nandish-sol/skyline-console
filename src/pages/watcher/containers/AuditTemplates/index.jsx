@@ -1,11 +1,20 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalAuditTemplateStore from 'stores/watcher/auditTemplates';
+import { watcherEndpoint } from 'client/client/constants';
 import actionConfigs from './actions';
 
 export class AuditTemplates extends Base {
   init() {
     this.store = globalAuditTemplateStore;
+  }
+
+  get endpoint() {
+    return watcherEndpoint();
+  }
+
+  get checkEndpoint() {
+    return true;
   }
 
   get name() {

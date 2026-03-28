@@ -11,32 +11,6 @@ export class ActionPlanStore extends Base {
     return 'uuid';
   }
 
-  get listResponseKey() {
-    return 'action_plans';
-  }
-
-  get needGetProject() {
-    return false;
-  }
-
-  get paramsFunc() {
-    return (params) => {
-      const { all_projects, current, limit, ...rest } = params;
-      return rest;
-    };
-  }
-
-  get paramsFuncPage() {
-    return (params) => {
-      const { all_projects, current, limit, ...rest } = params;
-      return rest;
-    };
-  }
-
-  async getCountForPage(newParams, newData) {
-    return { count: newData.length };
-  }
-
   @action
   async start(id) {
     return this.client.update(id, { state: 'TRIGGERED' });

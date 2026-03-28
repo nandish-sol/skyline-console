@@ -11,32 +11,6 @@ export class AuditTemplateStore extends Base {
     return 'uuid';
   }
 
-  get listResponseKey() {
-    return 'audit_templates';
-  }
-
-  get needGetProject() {
-    return false;
-  }
-
-  get paramsFunc() {
-    return (params) => {
-      const { all_projects, current, limit, ...rest } = params;
-      return rest;
-    };
-  }
-
-  get paramsFuncPage() {
-    return (params) => {
-      const { all_projects, current, limit, ...rest } = params;
-      return rest;
-    };
-  }
-
-  async getCountForPage(newParams, newData) {
-    return { count: newData.length };
-  }
-
   @action
   async create(newbody) {
     return this.client.create(newbody);
