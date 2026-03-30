@@ -780,8 +780,8 @@ export class StepCreate extends StepAction {
       server.return_reservation_id = true;
     }
     if (physicalNodeType.value !== 'smart') {
-      server.hypervisor_hostname =
-        physicalNode.selectedRows[0].hypervisor_hostname;
+      const hostName = physicalNode.selectedRows[0].hypervisor_hostname;
+      server.availability_zone = `${availableZone.value}:${hostName}`;
     }
     if (server.adminPass || userData) {
       const { username } = values;
