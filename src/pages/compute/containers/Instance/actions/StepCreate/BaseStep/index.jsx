@@ -721,6 +721,9 @@ export class BaseStep extends Base {
         label: t('Pin to Host'),
         type: 'check',
         hidden: !this.hasAdminRole,
+        onChange: (value) => {
+          this.updateContext({ pinToHost: value });
+        },
         tip: t(
           'Pin this instance to a specific compute host. The instance will be scheduled on the selected host.'
         ),
@@ -730,7 +733,7 @@ export class BaseStep extends Base {
         label: t('Target Host'),
         type: 'select',
         hidden: !this.hasAdminRole || !this.state.pinToHost,
-        required: this.state.pinToHost,
+        required: !!this.state.pinToHost,
         options: this.hostOptions,
         placeholder: t('Select a host'),
         isWrappedValue: true,
