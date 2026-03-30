@@ -260,18 +260,6 @@ export class RBACAdmin extends React.Component {
         ? assignmentsData.assignments || []
         : [];
 
-      const failedParts = [];
-      if (rolesResult.status === 'rejected') failedParts.push('roles');
-      if (usersResult.status === 'rejected') failedParts.push('users');
-      if (assignmentsResult.status === 'rejected') {
-        failedParts.push('assignments');
-      }
-      if (failedParts.length > 0) {
-        message.warning(
-          `Some data could not be loaded: ${failedParts.join(', ')}`
-        );
-      }
-
       const projectMap = {};
       const projects = [];
       assignments.forEach((a) => {
