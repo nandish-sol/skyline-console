@@ -7,26 +7,27 @@ export class AuditTemplateStore extends Base {
     return client.watcher.auditTemplates;
   }
 
-  get rowKey() {
-    return 'uuid';
-  }
-
-  get needGetProject() {
-    return false;
-  }
-
   get paramsFunc() {
     return (params) => {
-      const { all_projects, current, ...rest } = params;
+      const { all_projects, ...rest } = params;
       return rest;
     };
   }
 
   get paramsFuncPage() {
     return (params) => {
-      const { all_projects, current, ...rest } = params;
+      const { current, all_projects, ...rest } = params;
       return rest;
     };
+  }
+
+  get rowKey() {
+    return 'uuid';
+  }
+
+  async getCountForPage(newParams, newData, all_projects, result) {
+    const items = result.audit_templates || [];
+    return { count: items.length, total: items.length };
   }
 
   @action

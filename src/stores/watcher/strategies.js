@@ -7,26 +7,26 @@ export class StrategyStore extends Base {
     return client.watcher.strategies;
   }
 
-  get rowKey() {
-    return 'uuid';
-  }
-
-  get needGetProject() {
-    return false;
+  get listResponseKey() {
+    return 'strategies';
   }
 
   get paramsFunc() {
     return (params) => {
-      const { all_projects, current, ...rest } = params;
+      const { all_projects, ...rest } = params;
       return rest;
     };
   }
 
   get paramsFuncPage() {
     return (params) => {
-      const { all_projects, current, ...rest } = params;
+      const { current, all_projects, ...rest } = params;
       return rest;
     };
+  }
+
+  get rowKey() {
+    return 'uuid';
   }
 
   @action
@@ -35,10 +35,9 @@ export class StrategyStore extends Base {
       this.isLoading = true;
     }
     const result = await this.client.show(id);
-    const detail = result;
-    this.detail = detail;
+    this.detail = result;
     this.isLoading = false;
-    return detail;
+    return result;
   }
 }
 

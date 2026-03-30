@@ -3,6 +3,7 @@ import Base from 'containers/TabDetail';
 import { ActionPlanStore } from 'stores/watcher/actionPlans';
 import actionConfigs from '../actions';
 import BaseDetail from './BaseDetail';
+import ActionsList from './ActionsList';
 
 export class ActionPlanDetail extends Base {
   init() {
@@ -18,7 +19,7 @@ export class ActionPlanDetail extends Base {
   }
 
   get policy() {
-    return 'watcher:action_plan:get';
+    return '';
   }
 
   get actionConfigs() {
@@ -48,6 +49,11 @@ export class ActionPlanDetail extends Base {
         title: t('Detail'),
         key: 'general_info',
         component: BaseDetail,
+      },
+      {
+        title: t('Actions'),
+        key: 'actions',
+        component: ActionsList,
       },
     ];
   }

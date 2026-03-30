@@ -1,11 +1,7 @@
 import { ConfirmAction } from 'containers/Action';
 import globalActionPlanStore from 'stores/watcher/actionPlans';
 
-export default class DeleteAction extends ConfirmAction {
-  static policy = 'watcher:action_plan:delete';
-
-  static allowed = () => Promise.resolve(true);
-
+export default class Delete extends ConfirmAction {
   get id() {
     return 'delete';
   }
@@ -14,20 +10,24 @@ export default class DeleteAction extends ConfirmAction {
     return t('Delete Action Plan');
   }
 
-  get isDanger() {
-    return true;
+  get actionName() {
+    return t('Delete Action Plan');
   }
 
   get buttonText() {
     return t('Delete');
   }
 
-  get actionName() {
-    return t('delete action plan');
+  get isDanger() {
+    return true;
   }
 
-  onSubmit = (data) => {
-    const { uuid } = data;
+  policy = 'watcher:action_plan:delete';
+
+  allowedCheckFunc = () => true;
+
+  onSubmit = (item) => {
+    const { uuid } = item;
     return globalActionPlanStore.delete({ id: uuid });
   };
 }

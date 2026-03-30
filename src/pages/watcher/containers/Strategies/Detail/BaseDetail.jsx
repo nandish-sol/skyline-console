@@ -1,10 +1,9 @@
-import Base from 'containers/BaseDetail';
 import { inject, observer } from 'mobx-react';
+import Base from 'containers/BaseDetail';
 
 export class BaseDetail extends Base {
   get leftCards() {
-    const cards = [this.baseInfoCard];
-    return cards;
+    return [this.baseInfoCard];
   }
 
   get baseInfoCard() {
@@ -17,24 +16,9 @@ export class BaseDetail extends Base {
         label: t('Goal Name'),
         dataIndex: 'goal_name',
       },
-      {
-        label: t('Goal UUID'),
-        dataIndex: 'goal_uuid',
-      },
-      {
-        label: t('Parameters Spec'),
-        dataIndex: 'parameters_spec',
-        render: (value) => {
-          if (value) {
-            return JSON.stringify(value, null, 2);
-          }
-          return '-';
-        },
-      },
     ];
-
     return {
-      title: t('Strategy Info'),
+      title: t('Base Info'),
       options,
     };
   }

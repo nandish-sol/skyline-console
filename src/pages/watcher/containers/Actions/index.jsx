@@ -1,14 +1,25 @@
+import React from 'react';
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalActionStore from 'stores/watcher/actions';
+import { watcherEndpoint } from 'client/client/constants';
+import { Link } from 'react-router-dom';
 
 export class Actions extends Base {
   init() {
     this.store = globalActionStore;
   }
 
-  get fetchDataByAllProjects() {
-    return false;
+  get policy() {
+    return '';
+  }
+
+  get endpoint() {
+    return watcherEndpoint();
+  }
+
+  get checkEndpoint() {
+    return true;
   }
 
   get name() {
@@ -24,6 +35,7 @@ export class Actions extends Base {
       {
         title: t('UUID'),
         dataIndex: 'uuid',
+        isLink: true,
         routeName: this.getRouteName('watcherActionDetail'),
       },
       {
@@ -40,16 +52,12 @@ export class Actions extends Base {
         title: t('Action Plan UUID'),
         dataIndex: 'action_plan_uuid',
         isHideable: true,
-      },
-      {
-        title: t('Input Parameters'),
-        dataIndex: 'input_parameters',
-        isHideable: true,
         render: (value) => {
-          if (value) {
-            return JSON.stringify(value);
-          }
-          return '-';
+          if (!value) return '-';
+          const path = this.getRoutePath('watcherActionPlanDetail', {
+            id: value,
+          });
+          return <Link to={path}>{value}</Link>;
         },
       },
     ];

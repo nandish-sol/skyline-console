@@ -1,37 +1,25 @@
 import { ConfirmAction } from 'containers/Action';
 import globalActionPlanStore from 'stores/watcher/actionPlans';
 
-export default class StartAction extends ConfirmAction {
-  static policy = 'watcher:action_plan:update';
-
-  static allowed = (item) => {
-    return Promise.resolve(
-      item.state === 'RECOMMENDED' || item.state === 'PENDING'
-    );
-  };
-
+export default class Start extends ConfirmAction {
   get id() {
     return 'start';
   }
 
   get title() {
-    return t('Start Action Plan');
+    return t('Start');
   }
 
   get actionName() {
     return t('start action plan');
   }
 
-  confirmContext = (data) => {
-    const name = this.getName(data);
-    return t('Are you sure to {action} (Action Plan: {name})?', {
-      action: this.actionNameDisplay || this.title,
-      name,
-    });
-  };
+  policy = 'watcher:action_plan:update';
 
-  onSubmit = (data) => {
-    const { uuid } = data;
-    return globalActionPlanStore.start(uuid);
+  allowedCheckFunc = (item) => item.state === 'RECOMMENDED';
+
+  onSubmit = (item) => {
+    const { uuid } = item;
+    return globalActionPlanStore.start({ id: uuid });
   };
 }

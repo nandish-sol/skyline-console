@@ -1,13 +1,16 @@
-import CreateAction from './Create';
-import DeleteAction from './Delete';
+import Create from './Create';
+import Delete from './Delete';
 
 const actionConfigs = {
   rowActions: {
-    firstAction: DeleteAction,
-    moreActions: [],
+    moreActions: [
+      {
+        action: Delete,
+      },
+    ],
   },
-  batchActions: [DeleteAction],
-  primaryActions: [CreateAction],
+  batchActions: [Delete],
+  primaryActions: [Create],
 };
 
 export default actionConfigs;
