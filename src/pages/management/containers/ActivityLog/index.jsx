@@ -20,19 +20,21 @@ import {
   Tag,
   Spin,
   Button,
-  Input,
   Select,
   DatePicker,
   Row,
   Col,
-  Tooltip,
   Statistic,
+  Input,
+  Tooltip,
 } from 'antd';
 import {
   SyncOutlined,
   SearchOutlined,
-  FilterOutlined,
   ClearOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import client from 'client';
 
@@ -42,439 +44,412 @@ const { Option } = Select;
 const ACTION_COLOR_MAP = {
   create: 'green',
   delete: 'red',
-  stop: 'orange',
-  start: 'blue',
-  reboot: 'geekblue',
-  suspend: 'volcano',
-  resume: 'cyan',
-  pause: 'gold',
-  unpause: 'lime',
-  lock: 'purple',
-  unlock: 'magenta',
-  shelve: 'volcano',
-  unshelve: 'cyan',
-  resize: 'geekblue',
-  confirmResize: 'blue',
-  migrate: 'purple',
-  'live-migration': 'purple',
-  'live-resize': 'geekblue',
-  rebuild: 'orange',
-  attach_volume: 'blue',
-  detach_volume: 'orange',
-  attach_interface: 'blue',
-  detach_interface: 'orange',
-  createImage: 'green',
-  changePassword: 'gold',
-  extend_volume: 'cyan',
-  restore: 'green',
+  update: 'blue',
+  action: 'orange',
+  unknown: 'default',
 };
 
-const ACTION_LABEL_MAP = {
-  attach_interface: 'Attach Interface',
-  detach_interface: 'Detach Interface',
-  attach_volume: 'Attach Volume',
-  detach_volume: 'Detach Volume',
-  create: 'Create',
-  stop: 'Stop',
-  reboot: 'Reboot',
-  suspend: 'Suspend',
-  resume: 'Resume',
-  shelve: 'Shelve',
-  unshelve: 'Unshelve',
-  start: 'Start',
-  lock: 'Lock',
-  unlock: 'Unlock',
-  pause: 'Pause',
-  unpause: 'Unpause',
-  createImage: 'Create Snapshot',
-  resize: 'Resize',
-  confirmResize: 'Confirm Resize',
-  'live-resize': 'Online Resize',
-  extend_volume: 'Extend Volume',
-  changePassword: 'Change Password',
-  rebuild: 'Rebuild',
-  migrate: 'Migrate',
-  'live-migration': 'Live Migrate',
-  delete: 'Delete',
-  restore: 'Recover',
+const STATUS_COLOR = (status) => {
+  if (status >= 200 && status < 300) return 'green';
+  if (status >= 400 && status < 500) return 'orange';
+  if (status >= 500) return 'red';
+  return 'default';
 };
 
-const STATUS_COLOR_MAP = {
-  completed: 'green',
-  error: 'red',
-  running: 'blue',
-};
-
-const ACTION_OPTIONS = Object.keys(ACTION_LABEL_MAP).map((key) => ({
-  value: key,
-  label: ACTION_LABEL_MAP[key],
-}));
-
-export class ActivityLog extends Component {
+@inject('rootStore')
+@observer
+class ActivityLog extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      loading: true,
-      data: [],
-      error: null,
-      searchText: '',
-      actionFilter: undefined,
-      dateRange: null,
+      activities: [],
+      total: 0,
+      aggregations: {},
+      loading: false,
+      filters: {
+        service: undefined,
+        action_type: undefined,
+        resource_type: undefined,
+        search: undefined,
+        start: undefined,
+        end: undefined,
+      },
       pagination: {
         current: 1,
-        pageSize: 20,
+        pageSize: 50,
       },
+      // Dynamic filter options from API
+      serviceOptions: [],
+      resourceTypeOptions: [],
+      actionTypeOptions: [],
     };
   }
 
   componentDidMount() {
+    this.fetchFilterOptions();
     this.fetchData();
   }
 
-  fetchData = async () => {
-    this.setState({ loading: true, error: null });
+  fetchFilterOptions = async () => {
     try {
-      const { actionFilter, dateRange } = this.state;
-      const params = { limit: 500 };
-      if (actionFilter) {
-        params.action = actionFilter;
-      }
-      if (dateRange && dateRange[0]) {
-        params.start = dateRange[0].toISOString();
-      }
-      if (dateRange && dateRange[1]) {
-        params.end = dateRange[1].toISOString();
-      }
+      const result = await client.skyline.request.get(
+        'extension/activity-log/services'
+      );
+      this.setState({
+        serviceOptions: (result && result.services) || [],
+        resourceTypeOptions: (result && result.resource_types) || [],
+        actionTypeOptions: (result && result.action_types) || [],
+      });
+    } catch (e) {
+      // Silently fail — filters just won't have options
+    }
+  };
+
+  fetchData = async () => {
+    const { filters, pagination } = this.state;
+    this.setState({ loading: true });
+
+    const params = {};
+    if (filters.service) params.service = filters.service;
+    if (filters.action_type) params.action_type = filters.action_type;
+    if (filters.resource_type) params.resource_type = filters.resource_type;
+    if (filters.search) params.search = filters.search;
+    if (filters.start) params.start = filters.start;
+    if (filters.end) params.end = filters.end;
+    params.limit = pagination.pageSize;
+    params.offset = (pagination.current - 1) * pagination.pageSize;
+
+    try {
       const result = await client.skyline.request.get(
         'extension/activity-log',
         params
       );
-      const activities = (result && result.activities) || [];
-      this.setState({ data: activities, loading: false });
-    } catch (e) {
       this.setState({
+        activities: (result && result.activities) || [],
+        total: (result && result.total) || 0,
+        aggregations: (result && result.aggregations) || {},
         loading: false,
-        error: e.message || 'Failed to fetch activity log',
       });
+    } catch (e) {
+      this.setState({ activities: [], total: 0, loading: false });
     }
   };
 
-  handleSearch = (value) => {
-    this.setState({
-      searchText: value,
-      pagination: { current: 1, pageSize: 20 },
-    });
-  };
-
-  handleActionFilter = (value) => {
-    this.setState({ actionFilter: value }, this.fetchData);
+  handleFilterChange = (key, value) => {
+    this.setState(
+      (prev) => ({
+        filters: { ...prev.filters, [key]: value || undefined },
+        pagination: { ...prev.pagination, current: 1 },
+      }),
+      this.fetchData
+    );
   };
 
   handleDateRange = (dates) => {
-    this.setState({ dateRange: dates }, this.fetchData);
+    if (dates && dates.length === 2) {
+      this.setState(
+        (prev) => ({
+          filters: {
+            ...prev.filters,
+            start: dates[0].toISOString(),
+            end: dates[1].toISOString(),
+          },
+          pagination: { ...prev.pagination, current: 1 },
+        }),
+        this.fetchData
+      );
+    } else {
+      this.setState(
+        (prev) => ({
+          filters: { ...prev.filters, start: undefined, end: undefined },
+          pagination: { ...prev.pagination, current: 1 },
+        }),
+        this.fetchData
+      );
+    }
   };
 
-  handleClearFilters = () => {
+  handleTableChange = (pag) => {
     this.setState(
       {
-        searchText: '',
-        actionFilter: undefined,
-        dateRange: null,
-        pagination: { current: 1, pageSize: 20 },
+        pagination: {
+          current: pag.current,
+          pageSize: pag.pageSize,
+        },
       },
       this.fetchData
     );
   };
 
-  handleTableChange = (pagination) => {
-    this.setState({ pagination });
-  };
-
-  getFilteredData = () => {
-    const { data, searchText } = this.state;
-    if (!searchText) return data;
-    const lower = searchText.toLowerCase();
-    return data.filter(
-      (item) =>
-        (item.instance_name || '').toLowerCase().includes(lower) ||
-        (item.action || '').toLowerCase().includes(lower) ||
-        (item.user_id || '').toLowerCase().includes(lower) ||
-        (item.project_id || '').toLowerCase().includes(lower) ||
-        (item.request_id || '').toLowerCase().includes(lower) ||
-        (item.message || '').toLowerCase().includes(lower)
+  clearFilters = () => {
+    this.setState(
+      {
+        filters: {
+          service: undefined,
+          action_type: undefined,
+          resource_type: undefined,
+          search: undefined,
+          start: undefined,
+          end: undefined,
+        },
+        pagination: { current: 1, pageSize: 50 },
+      },
+      this.fetchData
     );
   };
 
-  renderActionTag(actionName) {
-    const color = ACTION_COLOR_MAP[actionName] || 'default';
-    const label = ACTION_LABEL_MAP[actionName] || actionName;
-    return <Tag color={color}>{label}</Tag>;
-  }
+  getColumns = () => [
+    {
+      title: 'Time',
+      dataIndex: 'timestamp',
+      key: 'timestamp',
+      width: 180,
+      render: (val) => {
+        if (!val) return '-';
+        const d = new Date(val);
+        return d.toLocaleString();
+      },
+    },
+    {
+      title: 'Service',
+      dataIndex: 'service',
+      key: 'service',
+      width: 100,
+      render: (val) => <Tag>{val || '-'}</Tag>,
+    },
+    {
+      title: 'Action',
+      dataIndex: 'action_type',
+      key: 'action_type',
+      width: 80,
+      render: (val) => (
+        <Tag color={ACTION_COLOR_MAP[val] || 'default'}>{val || '-'}</Tag>
+      ),
+    },
+    {
+      title: 'Resource',
+      dataIndex: 'resource_type',
+      key: 'resource_type',
+      width: 120,
+      render: (val) => val || '-',
+    },
+    {
+      title: 'URL',
+      dataIndex: 'http_url',
+      key: 'http_url',
+      ellipsis: true,
+      render: (val, record) => (
+        <Tooltip title={val}>
+          <span>
+            <Tag
+              color={record.http_method === 'DELETE' ? 'red' : 'blue'}
+              style={{ marginRight: 4 }}
+            >
+              {record.http_method}
+            </Tag>
+            {val ? val.substring(0, 60) : '-'}
+          </span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'http_status',
+      key: 'http_status',
+      width: 80,
+      render: (val) => <Tag color={STATUS_COLOR(val)}>{val || '-'}</Tag>,
+    },
+    {
+      title: 'User ID',
+      dataIndex: 'user_id',
+      key: 'user_id',
+      width: 120,
+      ellipsis: true,
+      render: (val) => (val ? `${val.substring(0, 12)}...` : '-'),
+    },
+    {
+      title: 'Node',
+      dataIndex: 'node',
+      key: 'node',
+      width: 80,
+    },
+    {
+      title: 'Time (s)',
+      dataIndex: 'response_time',
+      key: 'response_time',
+      width: 80,
+      render: (val) => (val ? `${parseFloat(val).toFixed(3)}` : '-'),
+    },
+  ];
 
-  renderStatusTag(status) {
-    const color = STATUS_COLOR_MAP[status] || 'default';
-    return <Tag color={color}>{(status || 'unknown').toUpperCase()}</Tag>;
-  }
-
-  renderSummary() {
-    const { data } = this.state;
-    const total = data.length;
-    const actionCounts = {};
-    data.forEach((item) => {
-      const a = item.action || 'unknown';
-      actionCounts[a] = (actionCounts[a] || 0) + 1;
-    });
-    const uniqueActions = Object.keys(actionCounts).length;
-    const errorCount = data.filter((item) => item.status === 'error').length;
+  renderSummaryCards = () => {
+    const { aggregations, total } = this.state;
+    const statusAgg = (aggregations.by_status || []).reduce((acc, b) => {
+      acc[b.key] = b.count;
+      return acc;
+    }, {});
 
     return (
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card size="small">
-            <Statistic title={t('Total Activities')} value={total} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title={t('Action Types')} value={uniqueActions} />
+            <Statistic title="Total Events" value={total} />
           </Card>
         </Col>
         <Col span={6}>
           <Card size="small">
             <Statistic
-              title={t('Errors')}
-              value={errorCount}
-              valueStyle={{ color: errorCount > 0 ? '#cf1322' : '#3f8600' }}
+              title="Success (2xx)"
+              value={statusAgg.success || 0}
+              valueStyle={{ color: '#3f8600' }}
+              prefix={<CheckCircleOutlined />}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card size="small">
             <Statistic
-              title={t('Filtered Results')}
-              value={this.getFilteredData().length}
+              title="Client Error (4xx)"
+              value={statusAgg.client_error || 0}
+              valueStyle={{ color: '#faad14' }}
+              prefix={<WarningOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic
+              title="Server Error (5xx)"
+              value={statusAgg.server_error || 0}
+              valueStyle={{ color: '#cf1322' }}
+              prefix={<CloseCircleOutlined />}
             />
           </Card>
         </Col>
       </Row>
     );
-  }
+  };
 
-  renderFilters() {
-    const { actionFilter, dateRange, searchText } = this.state;
+  renderFilters = () => {
+    const { filters, serviceOptions, resourceTypeOptions, actionTypeOptions } =
+      this.state;
 
     return (
-      <Row gutter={16} style={{ marginBottom: 16 }} align="middle">
-        <Col span={6}>
-          <Input.Search
-            placeholder={t('Search activities...')}
-            allowClear
-            value={searchText}
-            onChange={(e) => this.setState({ searchText: e.target.value })}
-            onSearch={this.handleSearch}
-            prefix={<SearchOutlined />}
-          />
-        </Col>
-        <Col span={5}>
-          <Select
-            placeholder={t('Filter by Action')}
-            allowClear
-            style={{ width: '100%' }}
-            value={actionFilter}
-            onChange={this.handleActionFilter}
-            suffixIcon={<FilterOutlined />}
-          >
-            {ACTION_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
-        </Col>
-        <Col span={7}>
-          <RangePicker
-            showTime
-            style={{ width: '100%' }}
-            value={dateRange}
-            onChange={this.handleDateRange}
-            placeholder={[t('Start Time'), t('End Time')]}
-          />
-        </Col>
-        <Col span={6} style={{ textAlign: 'right' }}>
-          <Tooltip title={t('Clear Filters')}>
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle">
+          <Col span={4}>
+            <Select
+              placeholder="Service"
+              allowClear
+              style={{ width: '100%' }}
+              value={filters.service}
+              onChange={(v) => this.handleFilterChange('service', v)}
+            >
+              {serviceOptions.map((s) => (
+                <Option key={s} value={s}>
+                  {s}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col span={3}>
+            <Select
+              placeholder="Action"
+              allowClear
+              style={{ width: '100%' }}
+              value={filters.action_type}
+              onChange={(v) => this.handleFilterChange('action_type', v)}
+            >
+              {actionTypeOptions.map((a) => (
+                <Option key={a} value={a}>
+                  {a}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col span={4}>
+            <Select
+              placeholder="Resource Type"
+              allowClear
+              style={{ width: '100%' }}
+              value={filters.resource_type}
+              onChange={(v) => this.handleFilterChange('resource_type', v)}
+            >
+              {resourceTypeOptions.map((r) => (
+                <Option key={r} value={r}>
+                  {r}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col span={5}>
+            <RangePicker
+              showTime
+              style={{ width: '100%' }}
+              onChange={this.handleDateRange}
+            />
+          </Col>
+          <Col span={4}>
+            <Input
+              placeholder="Search URL/ID..."
+              prefix={<SearchOutlined />}
+              allowClear
+              value={filters.search}
+              onChange={(e) =>
+                this.setState((prev) => ({
+                  filters: { ...prev.filters, search: e.target.value },
+                }))
+              }
+              onPressEnter={this.fetchData}
+            />
+          </Col>
+          <Col span={4}>
             <Button
-              icon={<ClearOutlined />}
-              onClick={this.handleClearFilters}
+              type="primary"
+              icon={<SyncOutlined />}
+              onClick={this.fetchData}
               style={{ marginRight: 8 }}
             >
-              {t('Clear')}
+              Refresh
             </Button>
-          </Tooltip>
-          <Button
-            type="primary"
-            icon={<SyncOutlined />}
-            onClick={this.fetchData}
-          >
-            {t('Refresh')}
-          </Button>
-        </Col>
-      </Row>
-    );
-  }
-
-  renderTable() {
-    const { loading, pagination } = this.state;
-    const filteredData = this.getFilteredData();
-
-    const columns = [
-      {
-        title: t('Timestamp'),
-        dataIndex: 'start_time',
-        key: 'start_time',
-        width: 180,
-        sorter: (a, b) =>
-          (a.start_time || '').localeCompare(b.start_time || ''),
-        defaultSortOrder: 'descend',
-        render: (value) => {
-          if (!value) return '-';
-          try {
-            return new Date(value).toLocaleString();
-          } catch (e) {
-            return value;
-          }
-        },
-      },
-      {
-        title: t('Action'),
-        dataIndex: 'action',
-        key: 'action',
-        width: 150,
-        filters: ACTION_OPTIONS.map((opt) => ({
-          text: opt.label,
-          value: opt.value,
-        })),
-        onFilter: (value, record) => record.action === value,
-        render: (value) => this.renderActionTag(value),
-      },
-      {
-        title: t('Resource Name'),
-        dataIndex: 'instance_name',
-        key: 'instance_name',
-        width: 200,
-        render: (value, record) => (
-          <a href={`/compute/instance/detail/${record.instance_id}`}>{value}</a>
-        ),
-      },
-      {
-        title: t('User ID'),
-        dataIndex: 'user_id',
-        key: 'user_id',
-        width: 280,
-        ellipsis: true,
-        render: (value) => (
-          <Tooltip title={value}>
-            <span>{value}</span>
-          </Tooltip>
-        ),
-      },
-      {
-        title: t('Project ID'),
-        dataIndex: 'project_id',
-        key: 'project_id',
-        width: 280,
-        ellipsis: true,
-        render: (value) => (
-          <Tooltip title={value}>
-            <span>{value}</span>
-          </Tooltip>
-        ),
-      },
-      {
-        title: t('Status'),
-        dataIndex: 'status',
-        key: 'status',
-        width: 120,
-        filters: [
-          { text: 'Completed', value: 'completed' },
-          { text: 'Error', value: 'error' },
-          { text: 'Running', value: 'running' },
-        ],
-        onFilter: (value, record) => record.status === value,
-        render: (value) => this.renderStatusTag(value),
-      },
-      {
-        title: t('Request ID'),
-        dataIndex: 'request_id',
-        key: 'request_id',
-        ellipsis: true,
-        render: (value) => (
-          <Tooltip title={value}>
-            <span style={{ fontSize: 12, fontFamily: 'monospace' }}>
-              {value}
-            </span>
-          </Tooltip>
-        ),
-      },
-    ];
-
-    return (
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="request_id"
-          size="small"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total) => t('{total} activities', { total }),
-          }}
-          onChange={this.handleTableChange}
-          scroll={{ x: 1400 }}
-        />
+            <Button icon={<ClearOutlined />} onClick={this.clearFilters}>
+              Clear
+            </Button>
+          </Col>
+        </Row>
       </Card>
     );
-  }
+  };
 
   render() {
-    const { loading, data, error } = this.state;
+    const { activities, total, loading, pagination } = this.state;
 
     return (
-      <div style={{ padding: '16px 24px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 16,
-          }}
-        >
-          <h2 style={{ margin: 0 }}>{t('Activity Log')}</h2>
-        </div>
-
-        {error && (
-          <Card style={{ marginBottom: 16 }}>
-            <Tag color="warning">{error}</Tag>
-          </Card>
-        )}
-
-        {loading && !data.length ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <Spin size="large" />
-          </div>
-        ) : (
-          <div>
-            {this.renderSummary()}
-            {this.renderFilters()}
-            {this.renderTable()}
-          </div>
-        )}
+      <div style={{ padding: '0 4px' }}>
+        <h2 style={{ marginBottom: 16 }}>Activity Log</h2>
+        {this.renderSummaryCards()}
+        {this.renderFilters()}
+        <Spin spinning={loading}>
+          <Table
+            columns={this.getColumns()}
+            dataSource={activities}
+            rowKey={(record) => record.request_id || record.timestamp}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total,
+              showSizeChanger: true,
+              pageSizeOptions: ['20', '50', '100', '200'],
+              showTotal: (t) => `Total ${t} events`,
+            }}
+            onChange={this.handleTableChange}
+            size="small"
+            scroll={{ x: 1200 }}
+          />
+        </Spin>
       </div>
     );
   }
 }
 
-export default inject('rootStore')(observer(ActivityLog));
+export default ActivityLog;
