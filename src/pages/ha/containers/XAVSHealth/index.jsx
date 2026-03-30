@@ -807,7 +807,7 @@ export class XAVSHealth extends Component {
     const { loading, data, error, autoRefresh } = this.state;
 
     return (
-      <div style={{ padding: '16px 24px' }}>
+      <div style={{ padding: '16px 24px', height: '100%', overflow: 'auto' }}>
         <div
           style={{
             display: 'flex',
