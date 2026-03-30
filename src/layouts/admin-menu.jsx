@@ -985,7 +985,7 @@ const renderMenu = (t) => {
     },
     {
       path: '/infra-optim',
-      name: t('Infrastructure Optimization'),
+      name: t('Optimisations'),
       key: 'infraOptimAdmin',
       icon: <ThunderboltOutlined />,
       children: [

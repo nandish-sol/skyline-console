@@ -433,7 +433,9 @@ class ActivityLog extends Component {
           <Table
             columns={this.getColumns()}
             dataSource={activities}
-            rowKey={(record) => record.request_id || record.timestamp}
+            rowKey={(record, index) =>
+              `${record.request_id || ''}-${record.timestamp || ''}-${index}`
+            }
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
