@@ -1263,6 +1263,13 @@ const renderMenu = (t) => {
             },
           ],
         },
+        {
+          path: '/ha/vmoves-admin',
+          name: t('VM Moves'),
+          key: 'masakariVMovesAdmin',
+          level: 1,
+          children: [],
+        },
       ],
     },
   ];
