@@ -11,6 +11,24 @@ export class ActionPlanStore extends Base {
     return 'uuid';
   }
 
+  get needGetProject() {
+    return false;
+  }
+
+  get paramsFunc() {
+    return (params) => {
+      const { all_projects, current, ...rest } = params;
+      return rest;
+    };
+  }
+
+  get paramsFuncPage() {
+    return (params) => {
+      const { all_projects, current, ...rest } = params;
+      return rest;
+    };
+  }
+
   @action
   async start(id) {
     return this.client.update(id, { state: 'TRIGGERED' });

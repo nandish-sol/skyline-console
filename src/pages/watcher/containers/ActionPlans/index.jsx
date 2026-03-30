@@ -1,7 +1,6 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
 import globalActionPlanStore from 'stores/watcher/actionPlans';
-import { watcherEndpoint } from 'client/client/constants';
 import actionConfigs from './actions';
 
 export class ActionPlans extends Base {
@@ -9,12 +8,8 @@ export class ActionPlans extends Base {
     this.store = globalActionPlanStore;
   }
 
-  get endpoint() {
-    return watcherEndpoint();
-  }
-
-  get checkEndpoint() {
-    return true;
+  get fetchDataByAllProjects() {
+    return false;
   }
 
   get name() {

@@ -11,6 +11,24 @@ export class StrategyStore extends Base {
     return 'uuid';
   }
 
+  get needGetProject() {
+    return false;
+  }
+
+  get paramsFunc() {
+    return (params) => {
+      const { all_projects, current, ...rest } = params;
+      return rest;
+    };
+  }
+
+  get paramsFuncPage() {
+    return (params) => {
+      const { all_projects, current, ...rest } = params;
+      return rest;
+    };
+  }
+
   @action
   async fetchDetail({ id, silent }) {
     if (!silent) {

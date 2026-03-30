@@ -90,6 +90,17 @@ class ActivityLog extends Component {
     this.fetchData();
   }
 
+  buildQueryString = (params) => {
+    const parts = [];
+    Object.keys(params).forEach((key) => {
+      const val = params[key];
+      if (val !== undefined && val !== null && val !== '') {
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+      }
+    });
+    return parts.length > 0 ? `?${parts.join('&')}` : '';
+  };
+
   fetchFilterOptions = async () => {
     try {
       const result = await client.skyline.request.get(
@@ -119,10 +130,11 @@ class ActivityLog extends Component {
     params.limit = pagination.pageSize;
     params.offset = (pagination.current - 1) * pagination.pageSize;
 
+    const qs = this.buildQueryString(params);
+
     try {
       const result = await client.skyline.request.get(
-        'extension/activity-log',
-        params
+        `extension/activity-log${qs}`
       );
       this.setState({
         activities: (result && result.activities) || [],
