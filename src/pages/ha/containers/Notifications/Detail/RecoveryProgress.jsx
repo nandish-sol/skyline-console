@@ -58,9 +58,9 @@ function formatTime(timeStr) {
 const vmoveColumns = [
   {
     title: t('VM Name'),
-    dataIndex: 'server_name',
-    key: 'server_name',
-    render: (val, record) => val || record.server_id || '-',
+    dataIndex: 'instance_name',
+    key: 'instance_name',
+    render: (val, record) => val || record.instance_uuid || '-',
   },
   {
     title: t('Source Host'),

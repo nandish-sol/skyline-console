@@ -53,14 +53,14 @@ function formatTime(timeStr) {
 const columns = [
   {
     title: t('VM Name'),
-    dataIndex: 'server_name',
-    key: 'server_name',
-    render: (val, record) => val || record.server_id || '-',
+    dataIndex: 'instance_name',
+    key: 'instance_name',
+    render: (val, record) => val || record.instance_uuid || '-',
   },
   {
-    title: t('Server ID'),
-    dataIndex: 'server_id',
-    key: 'server_id',
+    title: t('Instance ID'),
+    dataIndex: 'instance_uuid',
+    key: 'instance_uuid',
     ellipsis: true,
     render: (val) =>
       val ? (
@@ -222,7 +222,8 @@ export class VMoves extends React.Component {
               columns={columns}
               dataSource={allVmoves}
               rowKey={(record) =>
-                record.uuid || `${record.notification_id}-${record.server_id}`
+                record.uuid ||
+                `${record.notification_id}-${record.instance_uuid}`
               }
               loading={isLoading}
               pagination={{ pageSize: 20, showSizeChanger: true }}

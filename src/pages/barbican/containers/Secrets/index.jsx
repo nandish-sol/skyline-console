@@ -26,56 +26,91 @@ export class Secrets extends Base {
   }
 
   get actionConfigs() {
+    if (this.isAdminPage) {
+      return {};
+    }
     return actionConfigs;
   }
 
-  getColumns = () => [
-    {
-      title: t('Name'),
-      dataIndex: 'name',
-      routeName: 'barbicanSecretDetail',
-    },
-    {
-      title: t('Secret Type'),
-      dataIndex: 'secret_type',
-    },
-    {
-      title: t('Status'),
-      dataIndex: 'status',
-    },
-    {
-      title: t('Algorithm'),
-      dataIndex: 'algorithm',
-      render: (value) => {
-        if (!value) return '-';
-        try {
-          const parsed = JSON.parse(value);
-          return parsed.domain || value;
-        } catch {
-          return value;
-        }
+  getColumns = () => {
+    const columns = [
+      {
+        title: t('Name'),
+        dataIndex: 'name',
+        routeName: 'barbicanSecretDetail',
       },
-    },
-    {
-      title: t('Created'),
-      dataIndex: 'created',
-      valueRender: 'toLocalTime',
-    },
-    {
-      title: t('Expiration'),
-      dataIndex: 'expiration',
-      valueRender: 'toLocalTime',
-      render: (value) => value || '-',
-    },
-  ];
+      {
+        title: t('Secret Type'),
+        dataIndex: 'secret_type',
+      },
+      {
+        title: t('Status'),
+        dataIndex: 'status',
+      },
+      {
+        title: t('Algorithm'),
+        dataIndex: 'algorithm',
+        render: (value) => {
+          if (
+            !value ||
+            (typeof value === 'object' && Object.keys(value).length === 0)
+          ) {
+            return '-';
+          }
+          return String(value);
+        },
+      },
+      {
+        title: t('Created'),
+        dataIndex: 'created',
+        valueRender: 'toLocalTime',
+      },
+      {
+        title: t('Expiration'),
+        dataIndex: 'expiration',
+        valueRender: 'toLocalTime',
+        render: (value) => value || '-',
+      },
+    ];
+    if (this.isAdminPage) {
+      columns.splice(1, 0, {
+        title: t('Creator ID'),
+        dataIndex: 'creator_id',
+        ellipsis: true,
+        copyable: true,
+        width: 130,
+      });
+      columns.splice(columns.length - 1, 0, {
+        title: t('Content Type'),
+        dataIndex: 'content_types',
+        render: (val) => (val && val.default) || '-',
+      });
+    }
+    return columns;
+  };
 
   get searchFilters() {
-    return [
+    const filters = [
       {
         label: t('Name'),
         name: 'name',
       },
     ];
+    if (this.isAdminPage) {
+      filters.push({
+        label: t('Secret Type'),
+        name: 'secret_type',
+        options: [
+          { label: t('Opaque'), key: 'opaque' },
+          { label: t('Symmetric'), key: 'symmetric' },
+          { label: t('Public'), key: 'public' },
+          { label: t('Private'), key: 'private' },
+          { label: t('Certificate'), key: 'certificate' },
+          { label: t('Passphrase'), key: 'passphrase' },
+        ],
+      });
+    }
+    return filters;
   }
 }
 
