@@ -89,26 +89,47 @@ export class BaseStep extends Base {
     return values;
   }
 
+  get isUserAdmin() {
+    return this.props.rootStore.hasAdminPageRole;
+  }
+
   get availableZones() {
-    return (globalAvailabilityZoneStore.list.data || [])
+    const zones = (globalAvailabilityZoneStore.list.data || [])
       .filter((it) => it.zoneState.available)
       .map((it) => ({
         value: it.zoneName,
         label: it.zoneName,
       }));
-  }
-
-  get hostOptions() {
+    if (!this.isUserAdmin) {
+      return zones;
+    }
+    // For admin: add grouped pin-to-host options
     const hypervisors = globalHypervisorStore.list.data || [];
-    return hypervisors
-      .filter((h) => h.hypervisor_hostname || h.service_host)
-      .map((h) => {
+    const pinOptions = [];
+    zones.forEach((zone) => {
+      hypervisors.forEach((h) => {
         const host = h.hypervisor_hostname || h.service_host;
-        return {
-          value: host,
-          label: host,
-        };
+        if (host) {
+          pinOptions.push({
+            value: `${zone.value}:${host}`,
+            label: `${zone.value}:${host}`,
+          });
+        }
       });
+    });
+    if (pinOptions.length === 0) {
+      return zones;
+    }
+    return [
+      {
+        label: t('Available Zones'),
+        options: zones,
+      },
+      {
+        label: t('Pin to Host'),
+        options: pinOptions,
+      },
+    ];
   }
 
   get images() {
@@ -212,7 +233,7 @@ export class BaseStep extends Base {
 
   async getAvailZones() {
     const fetches = [globalAvailabilityZoneStore.fetchListWithoutDetail()];
-    if (this.hasAdminRole) {
+    if (this.isUserAdmin) {
       fetches.push(globalHypervisorStore.fetchList());
     }
     await Promise.all(fetches);
@@ -715,28 +736,6 @@ export class BaseStep extends Base {
         tip: t(
           'Availability zone refers to a physical area where power and network are independent of each other in the same area. In the same region, the availability zone and the availability zone can communicate with each other in the intranet, and the available zones can achieve fault isolation.'
         ),
-      },
-      {
-        name: 'pinToHost',
-        label: t('Pin to Host'),
-        type: 'check',
-        hidden: !this.hasAdminRole,
-        onChange: (value) => {
-          this.updateContext({ pinToHost: value });
-        },
-        tip: t(
-          'Pin this instance to a specific compute host. The instance will be scheduled on the selected host.'
-        ),
-      },
-      {
-        name: 'pinHost',
-        label: t('Target Host'),
-        type: 'select',
-        hidden: !this.hasAdminRole || !this.state.pinToHost,
-        required: !!this.state.pinToHost,
-        options: this.hostOptions,
-        placeholder: t('Select a host'),
-        isWrappedValue: true,
       },
       {
         type: 'divider',
