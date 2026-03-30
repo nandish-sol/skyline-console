@@ -230,11 +230,19 @@ class ActivityLog extends Component {
       title: 'Resource',
       dataIndex: 'resource_type',
       key: 'resource_type',
-      width: 120,
+      width: 100,
       render: (val) => val || '-',
     },
     {
-      title: 'URL',
+      title: 'Name',
+      dataIndex: 'resource_name',
+      key: 'resource_name',
+      width: 140,
+      ellipsis: true,
+      render: (val) => val || '-',
+    },
+    {
+      title: 'Detail',
       dataIndex: 'http_url',
       key: 'http_url',
       ellipsis: true,
@@ -260,12 +268,24 @@ class ActivityLog extends Component {
       render: (val) => <Tag color={STATUS_COLOR(val)}>{val || '-'}</Tag>,
     },
     {
-      title: 'User ID',
-      dataIndex: 'user_id',
-      key: 'user_id',
+      title: 'User',
+      dataIndex: 'user_name',
+      key: 'user_name',
       width: 120,
-      ellipsis: true,
-      render: (val) => (val ? `${val.substring(0, 12)}...` : '-'),
+      render: (val, record) => {
+        if (val) return val;
+        const uid = record.user_id || '';
+        return uid && uid !== 'system'
+          ? `${uid.substring(0, 8)}...`
+          : uid || '-';
+      },
+    },
+    {
+      title: 'Project',
+      dataIndex: 'project_name',
+      key: 'project_name',
+      width: 120,
+      render: (val) => val || '-',
     },
     {
       title: 'Node',
