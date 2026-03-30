@@ -39,6 +39,7 @@ import {
   getDiskInfo,
   getInstanceSnapshotDataDisk,
 } from 'resources/cinder/snapshot';
+import globalHypervisorStore from 'stores/nova/hypervisor';
 import FlavorSelectTable from '../../../components/FlavorSelectTable';
 
 export class BaseStep extends Base {
@@ -89,12 +90,30 @@ export class BaseStep extends Base {
   }
 
   get availableZones() {
-    return (globalAvailabilityZoneStore.list.data || [])
+    const zones = (globalAvailabilityZoneStore.list.data || [])
       .filter((it) => it.zoneState.available)
       .map((it) => ({
         value: it.zoneName,
         label: it.zoneName,
       }));
+    if (!this.hasAdminRole) {
+      return zones;
+    }
+    // For admin: add az:host options for each hypervisor
+    const hypervisors = globalHypervisorStore.list.data || [];
+    const hostOptions = [];
+    zones.forEach((zone) => {
+      hypervisors.forEach((h) => {
+        const host = h.hypervisor_hostname || h.service_host;
+        if (host) {
+          hostOptions.push({
+            value: `${zone.value}:${host}`,
+            label: `${zone.value}:${host} (${t('Pin to host')})`,
+          });
+        }
+      });
+    });
+    return [...zones, ...hostOptions];
   }
 
   get images() {
@@ -197,7 +216,11 @@ export class BaseStep extends Base {
   allowed = () => Promise.resolve();
 
   async getAvailZones() {
-    await globalAvailabilityZoneStore.fetchListWithoutDetail();
+    const fetches = [globalAvailabilityZoneStore.fetchListWithoutDetail()];
+    if (this.hasAdminRole) {
+      fetches.push(globalHypervisorStore.fetchList());
+    }
+    await Promise.all(fetches);
     if (this.availableZones.length) {
       this.updateFormValue('availableZone', this.availableZones[0]);
     }
