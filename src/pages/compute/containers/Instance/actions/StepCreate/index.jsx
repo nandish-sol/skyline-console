@@ -740,6 +740,8 @@ export class StepCreate extends StepAction {
       password,
       physicalNode,
       physicalNodeType,
+      pinToHost,
+      pinHost,
       securityGroup,
       flavor,
       userData = '',
@@ -779,7 +781,9 @@ export class StepCreate extends StepAction {
       server.max_count = count;
       server.return_reservation_id = true;
     }
-    if (physicalNodeType.value !== 'smart') {
+    if (pinToHost && pinHost && pinHost.value) {
+      server.availability_zone = `${availableZone.value}:${pinHost.value}`;
+    } else if (physicalNodeType && physicalNodeType.value !== 'smart') {
       const hostName = physicalNode.selectedRows[0].hypervisor_hostname;
       server.availability_zone = `${availableZone.value}:${hostName}`;
     }

@@ -90,30 +90,25 @@ export class BaseStep extends Base {
   }
 
   get availableZones() {
-    const zones = (globalAvailabilityZoneStore.list.data || [])
+    return (globalAvailabilityZoneStore.list.data || [])
       .filter((it) => it.zoneState.available)
       .map((it) => ({
         value: it.zoneName,
         label: it.zoneName,
       }));
-    if (!this.hasAdminRole) {
-      return zones;
-    }
-    // For admin: add az:host options for each hypervisor
+  }
+
+  get hostOptions() {
     const hypervisors = globalHypervisorStore.list.data || [];
-    const hostOptions = [];
-    zones.forEach((zone) => {
-      hypervisors.forEach((h) => {
+    return hypervisors
+      .filter((h) => h.hypervisor_hostname || h.service_host)
+      .map((h) => {
         const host = h.hypervisor_hostname || h.service_host;
-        if (host) {
-          hostOptions.push({
-            value: `${zone.value}:${host}`,
-            label: `${zone.value}:${host} (${t('Pin to host')})`,
-          });
-        }
+        return {
+          value: host,
+          label: host,
+        };
       });
-    });
-    return [...zones, ...hostOptions];
   }
 
   get images() {
@@ -720,6 +715,25 @@ export class BaseStep extends Base {
         tip: t(
           'Availability zone refers to a physical area where power and network are independent of each other in the same area. In the same region, the availability zone and the availability zone can communicate with each other in the intranet, and the available zones can achieve fault isolation.'
         ),
+      },
+      {
+        name: 'pinToHost',
+        label: t('Pin to Host'),
+        type: 'check',
+        hidden: !this.hasAdminRole,
+        tip: t(
+          'Pin this instance to a specific compute host. The instance will be scheduled on the selected host.'
+        ),
+      },
+      {
+        name: 'pinHost',
+        label: t('Target Host'),
+        type: 'select',
+        hidden: !this.hasAdminRole || !this.state.pinToHost,
+        required: this.state.pinToHost,
+        options: this.hostOptions,
+        placeholder: t('Select a host'),
+        isWrappedValue: true,
       },
       {
         type: 'divider',
