@@ -25,7 +25,15 @@ export class DNSZonesStore extends Base {
   }
 
   @action
-  delete = ({ id }) => this.submitting(this.client.delete(id));
+  delete = ({ id, project_id }) => {
+    const options = {};
+    if (project_id) {
+      options.headers = {
+        'X-Auth-Sudo-Project-Id': project_id,
+      };
+    }
+    return this.submitting(this.client.delete(id, null, null, options));
+  };
 
   @action
   update = ({ id }, body) => this.submitting(this.client.patch(id, body));

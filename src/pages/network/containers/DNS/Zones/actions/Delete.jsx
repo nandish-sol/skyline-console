@@ -51,6 +51,9 @@ export default class Delete extends ConfirmAction {
   };
 
   onSubmit = (item) => {
-    return globalDNSZonesStore.delete({ id: item.id });
+    return globalDNSZonesStore.delete({
+      id: item.id,
+      project_id: item.project_id,
+    });
   };
 }

@@ -94,43 +94,35 @@ export class ContainersStore extends Base {
   async listDidFetch(items) {
     if (items.length === 0) return items;
     const [secrets, listeners] = await Promise.all([
-      this.secretStore.fetchList({ mode: 'SERVER' }),
+      this.secretStore.fetchList(),
       globalListenerStore.fetchList(),
     ]);
     const newItems = items.map((it) => {
       const { secret_refs = [] } = it;
-      if (secret_refs.length === 0) {
-        it.hidden = true;
-      } else {
-        // Filter available secrets
-        secret_refs.forEach((secret) => {
-          const { secret_ref = '' } = secret;
-          const [, secretId] = secret_ref.split('/secrets/');
-          const theSecret = secrets.find((s) => s.id === secretId);
-          if (theSecret) {
-            Object.assign(secret, { secret_info: theSecret });
-            Object.assign(it, {
-              algorithm: theSecret.algorithm,
-              mode: theSecret.mode,
-            });
-          } else {
-            it.hidden = true;
-          }
-        });
-        // Determine if the certificate is used in the listener
-        this.updateItem(it, listeners);
-      }
+      secret_refs.forEach((secret) => {
+        const { secret_ref = '' } = secret;
+        const [, secretId] = secret_ref.split('/secrets/');
+        const theSecret = secrets.find((s) => s.id === secretId);
+        if (theSecret) {
+          Object.assign(secret, { secret_info: theSecret });
+          Object.assign(it, {
+            algorithm: theSecret.algorithm,
+            mode: theSecret.mode,
+          });
+        }
+      });
+      this.updateItem(it, listeners);
       return {
         ...it,
       };
     });
-    return newItems.filter((it) => it.hidden !== true);
+    return newItems;
   }
 
   async detailDidFetch(item) {
     const { secret_refs = [] } = item;
     const [secrets, listeners] = await Promise.all([
-      this.secretStore.fetchList({ mode: 'SERVER' }),
+      this.secretStore.fetchList(),
       globalListenerStore.fetchList(),
     ]);
     const secretIds = [];
