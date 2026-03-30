@@ -22,7 +22,6 @@ import {
   Modal,
   Form,
   Select,
-  Input,
   Spin,
   Popconfirm,
   message,
@@ -204,12 +203,6 @@ export class RBACAdmin extends React.Component {
       modalPermissions: {},
       modalActiveTab: 'nova',
       modalSaving: false,
-
-      // Create role modal
-      createModalVisible: false,
-      createRoleName: '',
-      createRoleDescription: '',
-      createRoleLoading: false,
 
       // Assign role modal
       assignModalVisible: false,
@@ -469,36 +462,7 @@ export class RBACAdmin extends React.Component {
     });
   };
 
-  // --- Create / Delete roles ---
-
-  handleCreateRole = async () => {
-    const { createRoleName, createRoleDescription } = this.state;
-    if (!createRoleName.trim()) {
-      message.warning('Role name is required');
-      return;
-    }
-    this.setState({ createRoleLoading: true });
-    try {
-      await apiFetch('/api/v1/rbac/roles', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: createRoleName.trim(),
-          description: createRoleDescription.trim(),
-        }),
-      });
-      message.success(`Role "${createRoleName.trim()}" created.`);
-      this.setState({
-        createModalVisible: false,
-        createRoleName: '',
-        createRoleDescription: '',
-        createRoleLoading: false,
-      });
-      this.fetchAll();
-    } catch (err) {
-      message.error(`Failed to create role: ${err.message}`);
-      this.setState({ createRoleLoading: false });
-    }
-  };
+  // --- Delete roles ---
 
   handleDeleteRoleById = async (roleId, roleName) => {
     try {
@@ -802,13 +766,6 @@ export class RBACAdmin extends React.Component {
             marginBottom: 16,
           }}
         >
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => this.setState({ createModalVisible: true })}
-          >
-            Create Role
-          </Button>
           {hasCustomSelected && (
             <Popconfirm
               title="Delete selected custom roles? This cannot be undone."
@@ -1077,63 +1034,6 @@ export class RBACAdmin extends React.Component {
     );
   }
 
-  // --- Render: Create Role modal ---
-
-  renderCreateRoleModal() {
-    const {
-      createModalVisible,
-      createRoleName,
-      createRoleDescription,
-      createRoleLoading,
-    } = this.state;
-
-    return (
-      <Modal
-        title="Create Role"
-        visible={createModalVisible}
-        onOk={this.handleCreateRole}
-        onCancel={() =>
-          this.setState({
-            createModalVisible: false,
-            createRoleName: '',
-            createRoleDescription: '',
-            createRoleLoading: false,
-          })
-        }
-        confirmLoading={createRoleLoading}
-        okText="Create"
-      >
-        <Form layout="vertical">
-          <Form.Item label="Role Name" required>
-            <Input
-              value={createRoleName}
-              onChange={(e) =>
-                this.setState({ createRoleName: e.target.value })
-              }
-              placeholder="e.g. vm-operator"
-              maxLength={64}
-            />
-          </Form.Item>
-          <Form.Item label="Description">
-            <Input.TextArea
-              value={createRoleDescription}
-              onChange={(e) =>
-                this.setState({ createRoleDescription: e.target.value })
-              }
-              placeholder="Optional description for this role"
-              rows={3}
-              maxLength={255}
-            />
-          </Form.Item>
-        </Form>
-        <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
-          After creating the role, click &quot;Manage Permissions&quot; to
-          configure its access.
-        </span>
-      </Modal>
-    );
-  }
-
   // --- Render: Assign Role modal ---
 
   renderAssignRoleModal() {
@@ -1278,7 +1178,6 @@ export class RBACAdmin extends React.Component {
             {this.renderAssignmentsTab()}
           </TabPane>
         </Tabs>
-        {this.renderCreateRoleModal()}
         {this.renderAssignRoleModal()}
         {this.renderPermissionModal()}
       </div>
