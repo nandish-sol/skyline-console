@@ -17,6 +17,7 @@ import { inject, observer } from 'mobx-react';
 import {
   Card,
   Col,
+  Progress,
   Row,
   Table,
   Tag,
@@ -24,14 +25,26 @@ import {
   Button,
   Statistic,
   Switch,
+  Tooltip,
 } from 'antd';
 import {
   SyncOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   WarningOutlined,
+  DatabaseOutlined,
+  CloudServerOutlined,
+  ClusterOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
+import CircleChart from 'components/PrometheusChart/CircleWithRightLegend';
 import client from 'client';
+
+const STATUS_COLORS = {
+  up: '#52c41a',
+  down: '#ff4d4f',
+  warn: '#faad14',
+};
 
 export class XAVSHealth extends Component {
   constructor(props) {
@@ -78,85 +91,160 @@ export class XAVSHealth extends Component {
     }
   };
 
-  renderStatusTag(status) {
-    if (status === 'up') {
-      return (
-        <Tag icon={<CheckCircleOutlined />} color="success">
-          UP
-        </Tag>
-      );
-    }
-    return (
-      <Tag icon={<CloseCircleOutlined />} color="error">
-        DOWN
-      </Tag>
-    );
-  }
-
-  renderBoolTag(value, trueText = 'Yes', falseText = 'No') {
-    if (value) {
-      return <Tag color="success">{trueText}</Tag>;
-    }
-    return <Tag color="error">{falseText}</Tag>;
-  }
-
-  renderSummary() {
+  renderSummaryCards() {
     const { summary } = this.state.data;
     if (!summary) return null;
 
+    const upPercent =
+      summary.total > 0 ? Math.round((summary.up / summary.total) * 100) : 0;
+
+    const serviceDonutData = [
+      { type: t('Healthy'), value: summary.up || 0 },
+      { type: t('Down'), value: summary.down || 0 },
+    ];
+
     return (
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic title={t('Total Services')} value={summary.total} />
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        {/* Service Health Donut */}
+        <Col span={8}>
+          <Card
+            title={
+              <span>
+                <CloudServerOutlined style={{ marginRight: 8 }} />
+                {t('Service Health')}
+              </span>
+            }
+            size="small"
+            bodyStyle={{ height: 200 }}
+          >
+            {summary.total > 0 ? (
+              <CircleChart
+                data={serviceDonutData}
+                legendFontSize={14}
+                legendOffsetX={-30}
+                middleFontSize={24}
+              />
+            ) : (
+              <div
+                style={{
+                  textAlign: 'center',
+                  paddingTop: 60,
+                  color: '#999',
+                }}
+              >
+                {t('No services detected')}
+              </div>
+            )}
           </Card>
         </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title={t('Services UP')}
-              value={summary.up}
-              valueStyle={{ color: '#3f8600' }}
-            />
+
+        {/* Overall Health Progress */}
+        <Col span={8}>
+          <Card
+            title={
+              <span>
+                <ApiOutlined style={{ marginRight: 8 }} />
+                {t('Overall Availability')}
+              </span>
+            }
+            size="small"
+            bodyStyle={{ height: 200 }}
+          >
+            <div style={{ textAlign: 'center', paddingTop: 16 }}>
+              <Progress
+                type="dashboard"
+                percent={upPercent}
+                strokeColor={
+                  upPercent === 100
+                    ? STATUS_COLORS.up
+                    : upPercent >= 80
+                    ? STATUS_COLORS.warn
+                    : STATUS_COLORS.down
+                }
+                format={(pct) => (
+                  <span>
+                    <div style={{ fontSize: 28, fontWeight: 600 }}>{pct}%</div>
+                    <div style={{ fontSize: 12, color: '#999' }}>
+                      {summary.up}/{summary.total}
+                    </div>
+                  </span>
+                )}
+                width={140}
+              />
+            </div>
           </Card>
         </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title={t('Services DOWN')}
-              value={summary.down}
-              valueStyle={{ color: summary.down > 0 ? '#cf1322' : '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title={t('RabbitMQ')}
-              value={summary.rabbitmq_up ? 'UP' : 'DOWN'}
-              valueStyle={{
-                color: summary.rabbitmq_up ? '#3f8600' : '#cf1322',
-              }}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title={t('MariaDB')}
-              value={summary.mariadb_ready ? 'READY' : 'NOT READY'}
-              valueStyle={{
-                color: summary.mariadb_ready ? '#3f8600' : '#cf1322',
-              }}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title={t('Cluster Size')}
-              value={summary.mariadb_cluster_size || '-'}
-            />
+
+        {/* Infrastructure Status */}
+        <Col span={8}>
+          <Card
+            title={
+              <span>
+                <ClusterOutlined style={{ marginRight: 8 }} />
+                {t('Infrastructure')}
+              </span>
+            }
+            size="small"
+            bodyStyle={{ height: 200 }}
+          >
+            <Row gutter={[16, 24]} style={{ paddingTop: 12 }}>
+              <Col span={12}>
+                <Statistic
+                  title={t('RabbitMQ')}
+                  value={summary.rabbitmq_up ? t('UP') : t('DOWN')}
+                  valueStyle={{
+                    color: summary.rabbitmq_up
+                      ? STATUS_COLORS.up
+                      : STATUS_COLORS.down,
+                    fontSize: 20,
+                  }}
+                  prefix={
+                    summary.rabbitmq_up ? (
+                      <CheckCircleOutlined />
+                    ) : (
+                      <CloseCircleOutlined />
+                    )
+                  }
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title={t('MariaDB')}
+                  value={summary.mariadb_ready ? t('READY') : t('NOT READY')}
+                  valueStyle={{
+                    color: summary.mariadb_ready
+                      ? STATUS_COLORS.up
+                      : STATUS_COLORS.down,
+                    fontSize: 20,
+                  }}
+                  prefix={
+                    summary.mariadb_ready ? (
+                      <CheckCircleOutlined />
+                    ) : (
+                      <CloseCircleOutlined />
+                    )
+                  }
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title={t('Galera Cluster')}
+                  value={summary.mariadb_cluster_size || '-'}
+                  suffix={t('nodes')}
+                  valueStyle={{ fontSize: 20 }}
+                  prefix={<DatabaseOutlined />}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title={t('Services')}
+                  value={summary.total || 0}
+                  suffix={t('total')}
+                  valueStyle={{ fontSize: 20 }}
+                  prefix={<CloudServerOutlined />}
+                />
+              </Col>
+            </Row>
           </Card>
         </Col>
       </Row>
@@ -165,30 +253,93 @@ export class XAVSHealth extends Component {
 
   renderServicesTable() {
     const { services } = this.state.data;
+    if (!services || services.length === 0) return null;
+
+    const apiServices = services.filter(
+      (s) =>
+        !s.service.includes('RabbitMQ AMQP') && !s.service.includes('MariaDB')
+    );
+    const infraServices = services.filter(
+      (s) =>
+        s.service.includes('RabbitMQ AMQP') || s.service.includes('MariaDB')
+    );
+
     const columns = [
-      { title: t('Service'), dataIndex: 'service', key: 'service' },
-      { title: t('Host'), dataIndex: 'host', key: 'host' },
+      {
+        title: t('Service'),
+        dataIndex: 'service',
+        key: 'service',
+        render: (text) => <strong>{text}</strong>,
+      },
+      {
+        title: t('Endpoint'),
+        dataIndex: 'host',
+        key: 'host',
+        render: (text) => (
+          <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{text}</span>
+        ),
+      },
       {
         title: t('Status'),
         dataIndex: 'status',
         key: 'status',
-        render: (status) => this.renderStatusTag(status),
+        width: 100,
+        render: (status) =>
+          status === 'up' ? (
+            <Tag icon={<CheckCircleOutlined />} color="success">
+              UP
+            </Tag>
+          ) : (
+            <Tag icon={<CloseCircleOutlined />} color="error">
+              DOWN
+            </Tag>
+          ),
       },
     ];
+
     return (
-      <Card
-        title={t('OpenStack Services')}
-        size="small"
-        style={{ marginBottom: 16 }}
-      >
-        <Table
-          columns={columns}
-          dataSource={services}
-          rowKey="service"
-          size="small"
-          pagination={false}
-        />
-      </Card>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col span={infraServices.length > 0 ? 16 : 24}>
+          <Card
+            title={
+              <span>
+                <ApiOutlined style={{ marginRight: 8 }} />
+                {t('OpenStack API Services')}
+              </span>
+            }
+            size="small"
+          >
+            <Table
+              columns={columns}
+              dataSource={apiServices}
+              rowKey="service"
+              size="small"
+              pagination={false}
+            />
+          </Card>
+        </Col>
+        {infraServices.length > 0 && (
+          <Col span={8}>
+            <Card
+              title={
+                <span>
+                  <ClusterOutlined style={{ marginRight: 8 }} />
+                  {t('Cluster Nodes')}
+                </span>
+              }
+              size="small"
+            >
+              <Table
+                columns={columns}
+                dataSource={infraServices}
+                rowKey="service"
+                size="small"
+                pagination={false}
+              />
+            </Card>
+          </Col>
+        )}
+      </Row>
     );
   }
 
@@ -196,16 +347,73 @@ export class XAVSHealth extends Component {
     const { rabbitmq } = this.state.data;
     if (!rabbitmq) return null;
 
+    const totals = rabbitmq.object_totals || {};
+    const queueTotals = rabbitmq.queue_totals || {};
+    const msgStats = rabbitmq.message_stats || {};
+    const nodes = rabbitmq.nodes || [];
+
+    // Donut: nodes up vs down
+    const nodesUp = nodes.filter((n) => n.up).length;
+    const nodesDown = nodes.filter((n) => !n.up).length;
+    const nodeDonutData = [
+      { type: t('Running'), value: nodesUp },
+      { type: t('Down'), value: nodesDown },
+    ];
+
     const nodeColumns = [
-      { title: t('Node'), dataIndex: 'name', key: 'name' },
-      { title: t('Type'), dataIndex: 'type', key: 'type' },
+      {
+        title: t('Node'),
+        dataIndex: 'name',
+        key: 'name',
+        render: (name) => {
+          const short = name ? name.replace('rabbit@', '') : '-';
+          return (
+            <Tooltip title={name}>
+              <strong>{short}</strong>
+            </Tooltip>
+          );
+        },
+      },
       {
         title: t('Status'),
         dataIndex: 'up',
         key: 'up',
-        render: (up) => this.renderBoolTag(up, 'Running', 'Down'),
+        width: 90,
+        render: (up) =>
+          up ? (
+            <Tag color="success">{t('Running')}</Tag>
+          ) : (
+            <Tag color="error">{t('Down')}</Tag>
+          ),
       },
-      { title: t('Memory'), dataIndex: 'mem_used', key: 'mem_used' },
+      {
+        title: t('Memory'),
+        key: 'mem',
+        render: (_, r) => (
+          <span>
+            {r.mem_used || '-'}
+            {r.mem_alarm && (
+              <Tag color="error" style={{ marginLeft: 4, fontSize: 10 }}>
+                ALARM
+              </Tag>
+            )}
+          </span>
+        ),
+      },
+      {
+        title: t('Disk Free'),
+        key: 'disk',
+        render: (_, r) => (
+          <span>
+            {r.disk_free || '-'}
+            {r.disk_free_alarm && (
+              <Tag color="error" style={{ marginLeft: 4, fontSize: 10 }}>
+                ALARM
+              </Tag>
+            )}
+          </span>
+        ),
+      },
       {
         title: t('FDs'),
         key: 'fd',
@@ -216,109 +424,169 @@ export class XAVSHealth extends Component {
         key: 'sockets',
         render: (_, r) => `${r.sockets_used || '-'}/${r.sockets_total || '-'}`,
       },
-      { title: t('Disk Free'), dataIndex: 'disk_free', key: 'disk_free' },
-      { title: t('Uptime'), dataIndex: 'uptime', key: 'uptime' },
+      {
+        title: t('Uptime'),
+        dataIndex: 'uptime',
+        key: 'uptime',
+      },
     ];
-
-    const totals = rabbitmq.object_totals || {};
-    const queueTotals = rabbitmq.queue_totals || {};
-    const msgStats = rabbitmq.message_stats || {};
 
     return (
       <Card
-        title={t('RabbitMQ Cluster')}
+        title={
+          <span>
+            <ClusterOutlined style={{ marginRight: 8 }} />
+            {t('RabbitMQ Cluster')}
+            {rabbitmq.mgmt_version && (
+              <Tag style={{ marginLeft: 8 }} color="blue">
+                v{rabbitmq.mgmt_version}
+              </Tag>
+            )}
+            {rabbitmq.vhost_aliveness_ok !== null && (
+              <Tag
+                style={{ marginLeft: 4 }}
+                color={rabbitmq.vhost_aliveness_ok ? 'success' : 'error'}
+              >
+                {rabbitmq.vhost_aliveness_ok
+                  ? t('Vhost Alive')
+                  : t('Vhost Down')}
+              </Tag>
+            )}
+          </span>
+        }
         size="small"
         style={{ marginBottom: 16 }}
       >
-        <Row gutter={16} style={{ marginBottom: 12 }}>
+        <Row gutter={[16, 16]}>
+          {/* Donut chart for nodes */}
           <Col span={6}>
-            {this.renderBoolTag(
-              rabbitmq.cluster_up,
-              'Cluster UP',
-              'Cluster DOWN'
-            )}
-          </Col>
-          <Col span={6}>
-            {rabbitmq.vhost_aliveness_ok !== null &&
-              this.renderBoolTag(
-                rabbitmq.vhost_aliveness_ok,
-                'Vhost Alive',
-                'Vhost Down'
+            <Card
+              size="small"
+              title={t('Nodes')}
+              bodyStyle={{ height: 160 }}
+              bordered={false}
+            >
+              {nodes.length > 0 ? (
+                <CircleChart
+                  data={nodeDonutData}
+                  legendFontSize={12}
+                  legendOffsetX={-20}
+                  middleFontSize={20}
+                />
+              ) : (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    paddingTop: 40,
+                    color: '#999',
+                  }}
+                >
+                  {t('No data')}
+                </div>
               )}
+            </Card>
           </Col>
-          <Col span={6}>
-            {rabbitmq.mgmt_version && (
-              <span>
-                {t('Version')}: {rabbitmq.mgmt_version}
-              </span>
-            )}
+
+          {/* Message stats */}
+          <Col span={18}>
+            <Row gutter={[12, 12]}>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Connections')}
+                    value={totals.connections || 0}
+                    valueStyle={{ fontSize: 22, fontWeight: 600 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Channels')}
+                    value={totals.channels || 0}
+                    valueStyle={{ fontSize: 22, fontWeight: 600 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Queues')}
+                    value={totals.queues || 0}
+                    valueStyle={{ fontSize: 22, fontWeight: 600 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Exchanges')}
+                    value={totals.exchanges || 0}
+                    valueStyle={{ fontSize: 22, fontWeight: 600 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Messages')}
+                    value={queueTotals.messages || 0}
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Ready')}
+                    value={queueTotals.messages_ready || 0}
+                    valueStyle={{
+                      fontSize: 18,
+                      color:
+                        (queueTotals.messages_ready || 0) > 1000
+                          ? STATUS_COLORS.warn
+                          : undefined,
+                    }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Unacked')}
+                    value={queueTotals.messages_unacknowledged || 0}
+                    valueStyle={{
+                      fontSize: 18,
+                      color:
+                        (queueTotals.messages_unacknowledged || 0) > 100
+                          ? STATUS_COLORS.warn
+                          : undefined,
+                    }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Published')}
+                    value={msgStats.publish || 0}
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+            </Row>
           </Col>
         </Row>
-        <Row gutter={16} style={{ marginBottom: 12 }}>
-          <Col span={3}>
-            <Statistic
-              title={t('Connections')}
-              value={totals.connections || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Channels')}
-              value={totals.channels || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Queues')}
-              value={totals.queues || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Messages')}
-              value={queueTotals.messages || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Ready')}
-              value={queueTotals.messages_ready || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Unacked')}
-              value={queueTotals.messages_unacknowledged || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Published')}
-              value={msgStats.publish || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-          <Col span={3}>
-            <Statistic
-              title={t('Acked')}
-              value={msgStats.ack || 0}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-        </Row>
-        {rabbitmq.nodes && rabbitmq.nodes.length > 0 && (
+
+        {/* Node details table */}
+        {nodes.length > 0 && (
           <Table
             columns={nodeColumns}
-            dataSource={rabbitmq.nodes}
+            dataSource={nodes}
             rowKey="name"
             size="small"
             pagination={false}
+            style={{ marginTop: 12 }}
           />
         )}
       </Card>
@@ -329,71 +597,206 @@ export class XAVSHealth extends Component {
     const { mariadb } = this.state.data;
     if (!mariadb) return null;
 
+    const nodes = mariadb.nodes || [];
+
+    // Donut: nodes reachable vs unreachable
+    const reachable = nodes.filter((n) => n.reachable).length;
+    const unreachable = nodes.filter((n) => !n.reachable).length;
+    const nodeDonutData = [
+      { type: t('Reachable'), value: reachable || 0 },
+      { type: t('Unreachable'), value: unreachable || 0 },
+    ];
+
     const nodeColumns = [
-      { title: t('Node'), dataIndex: 'node', key: 'node' },
+      {
+        title: t('Node Address'),
+        dataIndex: 'node',
+        key: 'node',
+        render: (addr) => (
+          <span style={{ fontFamily: 'monospace' }}>{addr}</span>
+        ),
+      },
       {
         title: t('Reachable'),
         dataIndex: 'reachable',
         key: 'reachable',
-        render: (v) => this.renderBoolTag(v),
+        width: 100,
+        render: (v) =>
+          v ? (
+            <Tag color="success">{t('Yes')}</Tag>
+          ) : (
+            <Tag color="error">{t('No')}</Tag>
+          ),
       },
     ];
 
     return (
       <Card
-        title={t('MariaDB / Galera Cluster')}
+        title={
+          <span>
+            <DatabaseOutlined style={{ marginRight: 8 }} />
+            {t('MariaDB / Galera Cluster')}
+            {mariadb.provider_version && (
+              <Tag style={{ marginLeft: 8 }} color="blue">
+                Galera {mariadb.provider_version}
+              </Tag>
+            )}
+            {mariadb.ready ? (
+              <Tag style={{ marginLeft: 4 }} color="success">
+                {t('READY')}
+              </Tag>
+            ) : (
+              <Tag style={{ marginLeft: 4 }} color="error">
+                {t('NOT READY')}
+              </Tag>
+            )}
+          </span>
+        }
         size="small"
         style={{ marginBottom: 16 }}
       >
-        <Row gutter={16} style={{ marginBottom: 12 }}>
-          <Col span={4}>
-            {this.renderBoolTag(mariadb.ready, 'READY', 'NOT READY')}
+        <Row gutter={[16, 16]}>
+          {/* Donut for nodes */}
+          <Col span={6}>
+            <Card
+              size="small"
+              title={t('Cluster Nodes')}
+              bodyStyle={{ height: 160 }}
+              bordered={false}
+            >
+              {nodes.length > 0 ? (
+                <CircleChart
+                  data={nodeDonutData}
+                  legendFontSize={12}
+                  legendOffsetX={-20}
+                  middleFontSize={20}
+                />
+              ) : (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    paddingTop: 40,
+                    color: '#999',
+                  }}
+                >
+                  {mariadb.cluster_size
+                    ? `${mariadb.cluster_size} ${t('nodes')}`
+                    : t('No data')}
+                </div>
+              )}
+            </Card>
           </Col>
-          <Col span={4}>
-            <span>
-              {t('Cluster Status')}:{' '}
-              <strong>{mariadb.cluster_status || '-'}</strong>
-            </span>
-          </Col>
-          <Col span={4}>
-            <span>
-              {t('Local State')}: <strong>{mariadb.local_state || '-'}</strong>
-            </span>
-          </Col>
-          <Col span={4}>
-            <span>
-              {t('Connected')}:{' '}
-              {mariadb.connected !== null
-                ? this.renderBoolTag(mariadb.connected)
-                : '-'}
-            </span>
-          </Col>
-          <Col span={4}>
-            <span>
-              {t('Size')}: <strong>{mariadb.cluster_size || '-'}</strong>
-            </span>
-          </Col>
-          <Col span={4}>
-            <span>
-              {t('Uptime')}: <strong>{mariadb.uptime || '-'}</strong>
-            </span>
+
+          {/* Cluster stats */}
+          <Col span={18}>
+            <Row gutter={[12, 12]}>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Cluster Status')}
+                    value={mariadb.cluster_status || '-'}
+                    valueStyle={{
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color:
+                        mariadb.cluster_status === 'Primary'
+                          ? STATUS_COLORS.up
+                          : STATUS_COLORS.warn,
+                    }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Local State')}
+                    value={mariadb.local_state || '-'}
+                    valueStyle={{
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color:
+                        mariadb.local_state === 'Synced'
+                          ? STATUS_COLORS.up
+                          : STATUS_COLORS.warn,
+                    }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Cluster Size')}
+                    value={mariadb.cluster_size || '-'}
+                    suffix={t('nodes')}
+                    valueStyle={{ fontSize: 18, fontWeight: 600 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Connected')}
+                    value={
+                      mariadb.connected !== null
+                        ? mariadb.connected
+                          ? t('Yes')
+                          : t('No')
+                        : '-'
+                    }
+                    valueStyle={{
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: mariadb.connected
+                        ? STATUS_COLORS.up
+                        : STATUS_COLORS.down,
+                    }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Uptime')}
+                    value={mariadb.uptime || '-'}
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Active Connections')}
+                    value={
+                      mariadb.threads_connected !== null
+                        ? mariadb.threads_connected
+                        : '-'
+                    }
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title={t('Node Name')}
+                    value={mariadb.node_name || '-'}
+                    valueStyle={{ fontSize: 14 }}
+                  />
+                </Card>
+              </Col>
+            </Row>
           </Col>
         </Row>
-        {mariadb.provider_version && (
-          <p style={{ marginBottom: 8 }}>
-            {t('Provider')}: {mariadb.provider_version}
-            {mariadb.node_name && ` | ${t('Node')}: ${mariadb.node_name}`}
-            {mariadb.threads_connected !== null &&
-              ` | ${t('Active Connections')}: ${mariadb.threads_connected}`}
-          </p>
-        )}
-        {mariadb.nodes && mariadb.nodes.length > 0 && (
+
+        {/* Node details table */}
+        {nodes.length > 0 && (
           <Table
             columns={nodeColumns}
-            dataSource={mariadb.nodes}
+            dataSource={nodes}
             rowKey="node"
             size="small"
             pagination={false}
+            style={{ marginTop: 12 }}
           />
         )}
       </Card>
@@ -413,9 +816,11 @@ export class XAVSHealth extends Component {
             marginBottom: 16,
           }}
         >
-          <h2 style={{ margin: 0 }}>{t('XAVS Health Monitor')}</h2>
-          <div>
-            <span style={{ marginRight: 8 }}>{t('Auto Refresh')}</span>
+          <h2 style={{ margin: 0 }}>{t('Cluster Health')}</h2>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: 8, color: '#666' }}>
+              {t('Auto Refresh')}
+            </span>
             <Switch
               checked={autoRefresh}
               onChange={this.toggleAutoRefresh}
@@ -446,14 +851,10 @@ export class XAVSHealth extends Component {
           </div>
         ) : data ? (
           <div>
-            {this.renderSummary()}
+            {this.renderSummaryCards()}
             {this.renderServicesTable()}
-            <Row gutter={16}>
-              <Col span={24}>{this.renderRabbitMQ()}</Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={24}>{this.renderMariaDB()}</Col>
-            </Row>
+            {this.renderRabbitMQ()}
+            {this.renderMariaDB()}
           </div>
         ) : null}
       </div>
