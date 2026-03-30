@@ -1,5 +1,6 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
+import client from 'client';
 import globalSecretsStore from 'stores/barbican/secrets';
 import { getOriginEndpoint } from 'client/client/constants';
 import actionConfigs from './actions';
@@ -7,6 +8,22 @@ import actionConfigs from './actions';
 export class Secrets extends Base {
   init() {
     this.store = globalSecretsStore;
+    this.secretStores = [];
+    this.defaultStoreName = '-';
+    this.fetchSecretStores();
+  }
+
+  async fetchSecretStores() {
+    try {
+      const result = await client.barbican.secretStores.list();
+      this.secretStores = (result && result.secret_stores) || [];
+      const defaultStore = this.secretStores.find((s) => s.global_default);
+      if (defaultStore) {
+        this.defaultStoreName = defaultStore.name;
+      }
+    } catch (e) {
+      this.secretStores = [];
+    }
   }
 
   get policy() {
@@ -84,6 +101,11 @@ export class Secrets extends Base {
         title: t('Content Type'),
         dataIndex: 'content_types',
         render: (val) => (val && val.default) || '-',
+      });
+      columns.splice(columns.length - 1, 0, {
+        title: t('Secret Backend'),
+        dataIndex: 'secret_backend',
+        render: () => this.defaultStoreName,
       });
     }
     return columns;
