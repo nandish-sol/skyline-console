@@ -37,6 +37,16 @@ export class BarbicanClient extends Base {
         key: 'containers',
         responseKey: 'container',
       },
+      {
+        name: 'secretStores',
+        key: 'secret-stores',
+        responseKey: 'secret_store',
+        subResources: [
+          {
+            key: 'preferred',
+          },
+        ],
+      },
     ];
   }
 }

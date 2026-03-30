@@ -1,6 +1,7 @@
 import { inject, observer } from 'mobx-react';
 import { ModalAction } from 'containers/Action';
 import globalSecretsStore from 'stores/barbican/secrets';
+import globalSecretStoresStore from 'stores/barbican/secret-stores';
 
 export class Create extends ModalAction {
   static id = 'create-secret';
@@ -13,10 +14,47 @@ export class Create extends ModalAction {
 
   init() {
     this.store = globalSecretsStore;
+    this.secretStoresStore = globalSecretStoresStore;
+    this.state = {
+      ...this.state,
+      secretStores: [],
+      storesLoaded: false,
+    };
+    this.fetchSecretStores();
   }
 
   get name() {
     return t('Create Secret');
+  }
+
+  async fetchSecretStores() {
+    try {
+      const stores = await this.secretStoresStore.fetchList();
+      this.setState({
+        secretStores: stores || [],
+        storesLoaded: true,
+      });
+    } catch (e) {
+      this.setState({ storesLoaded: true });
+    }
+  }
+
+  get secretStoreOptions() {
+    const { secretStores = [] } = this.state;
+    return secretStores.map((s) => ({
+      label: `${s.name}${s.global_default ? ` (${t('Default')})` : ''}`,
+      value: s.id,
+    }));
+  }
+
+  get hasMultipleStores() {
+    return this.secretStoreOptions.length > 1;
+  }
+
+  get defaultStoreId() {
+    const { secretStores = [] } = this.state;
+    const defaultStore = secretStores.find((s) => s.global_default);
+    return defaultStore ? defaultStore.id : '';
   }
 
   get formItems() {
@@ -42,6 +80,16 @@ export class Create extends ModalAction {
         required: true,
       },
       {
+        name: 'secret_store',
+        label: t('Secret Store Backend'),
+        type: 'select',
+        options: this.secretStoreOptions,
+        hidden: !this.hasMultipleStores,
+        tip: t(
+          'Select which backend stores this secret. Default is the built-in crypto store.'
+        ),
+      },
+      {
         name: 'payload',
         label: t('Payload'),
         type: 'textarea',
@@ -64,13 +112,36 @@ export class Create extends ModalAction {
     ];
   }
 
-  onSubmit = (values) => {
-    const body = { ...values };
+  onSubmit = async (values) => {
+    const { secret_store, ...secretData } = values;
+    const body = { ...secretData };
     if (!body.payload) {
       delete body.payload;
       delete body.payload_content_type;
     }
-    return this.store.create(body);
+
+    const selectedStoreId = secret_store;
+    const needsSwitch =
+      this.hasMultipleStores &&
+      selectedStoreId &&
+      selectedStoreId !== this.defaultStoreId;
+
+    if (needsSwitch) {
+      await this.secretStoresStore.setPreferred(selectedStoreId);
+    }
+
+    try {
+      const result = await this.store.create(body);
+      return result;
+    } finally {
+      if (needsSwitch) {
+        try {
+          await this.secretStoresStore.removePreferred(selectedStoreId);
+        } catch (e) {
+          // Best effort — preferred store cleanup
+        }
+      }
+    }
   };
 }
 
