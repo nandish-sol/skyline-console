@@ -90,17 +90,6 @@ class ActivityLog extends Component {
     this.fetchData();
   }
 
-  buildQueryString = (params) => {
-    const parts = [];
-    Object.keys(params).forEach((key) => {
-      const val = params[key];
-      if (val !== undefined && val !== null && val !== '') {
-        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
-      }
-    });
-    return parts.length > 0 ? `?${parts.join('&')}` : '';
-  };
-
   fetchFilterOptions = async () => {
     try {
       const result = await client.skyline.request.get(
@@ -130,11 +119,10 @@ class ActivityLog extends Component {
     params.limit = pagination.pageSize;
     params.offset = (pagination.current - 1) * pagination.pageSize;
 
-    const qs = this.buildQueryString(params);
-
     try {
       const result = await client.skyline.request.get(
-        `extension/activity-log${qs}`
+        'extension/activity-log',
+        params
       );
       this.setState({
         activities: (result && result.activities) || [],
@@ -290,7 +278,13 @@ class ActivityLog extends Component {
       dataIndex: 'response_time',
       key: 'response_time',
       width: 80,
-      render: (val) => (val ? `${parseFloat(val).toFixed(3)}` : '-'),
+      render: (val) => {
+        if (!val) return '-';
+        const num = parseFloat(val);
+        // Apache logs use microseconds (>1000), Python logs use seconds (<100)
+        const secs = num > 100 ? num / 1000000 : num;
+        return `${secs.toFixed(3)}`;
+      },
     },
   ];
 
