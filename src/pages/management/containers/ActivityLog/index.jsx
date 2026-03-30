@@ -76,7 +76,7 @@ class ActivityLog extends Component {
       },
       pagination: {
         current: 1,
-        pageSize: 50,
+        pageSize: 20,
       },
       // Dynamic filter options from API
       serviceOptions: [],
