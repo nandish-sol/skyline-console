@@ -238,7 +238,12 @@ export class BaseStep extends Base {
     }
     await Promise.all(fetches);
     if (this.availableZones.length) {
-      this.updateFormValue('availableZone', this.availableZones[0]);
+      const first = this.availableZones[0];
+      // Grouped options: {label, options: [...]} — pick first option inside group
+      const defaultValue = first.options ? first.options[0] : first;
+      if (defaultValue) {
+        this.updateFormValue('availableZone', defaultValue);
+      }
     }
   }
 
