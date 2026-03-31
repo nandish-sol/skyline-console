@@ -4,20 +4,21 @@ import globalSecretsStore from 'stores/barbican/secrets';
 import globalSecretStoresStore from 'stores/barbican/secret-stores';
 
 const PAYLOAD_HINTS = {
-  opaque: t('Enter any text or data (e.g. API key, password, config value)'),
-  symmetric: t(
-    'Enter a Base64-encoded symmetric key (e.g. AES key: openssl rand -base64 32)'
-  ),
-  public: t(
-    'Enter a PEM-encoded public key (begins with -----BEGIN PUBLIC KEY-----)'
-  ),
-  private: t(
-    'Enter a PEM-encoded private key (begins with -----BEGIN RSA PRIVATE KEY-----)'
-  ),
-  certificate: t(
-    'Enter a PEM-encoded certificate (begins with -----BEGIN CERTIFICATE-----)'
-  ),
-  passphrase: t('Enter a passphrase or password string'),
+  opaque: t('Any text or data: API key, password, config value, token'),
+  symmetric: t('Base64-encoded key. Generate with: openssl rand -base64 32'),
+  public: t('PEM format: must start with -----BEGIN PUBLIC KEY-----'),
+  private: t('PEM format: must start with -----BEGIN RSA PRIVATE KEY-----'),
+  certificate: t('PEM format: must start with -----BEGIN CERTIFICATE-----'),
+  passphrase: t('A passphrase or password string'),
+};
+
+const PAYLOAD_PLACEHOLDERS = {
+  opaque: 'my-api-key-or-secret-value',
+  symmetric: 'dGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIGtleQ==',
+  public: '-----BEGIN PUBLIC KEY-----\nMIIBIjAN...',
+  private: '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIB...',
+  certificate: '-----BEGIN CERTIFICATE-----\nMIIDXTCC...',
+  passphrase: 'my-secure-passphrase',
 };
 
 const PAYLOAD_VALIDATORS = {
@@ -143,7 +144,8 @@ export class Create extends ModalAction {
         name: 'payload',
         label: t('Payload'),
         type: 'textarea',
-        tip: hint,
+        extra: hint,
+        placeholder: PAYLOAD_PLACEHOLDERS[secretType] || '',
         validator: (rule, val) => {
           if (!val) return Promise.resolve();
           const validate = PAYLOAD_VALIDATORS[secretType];
