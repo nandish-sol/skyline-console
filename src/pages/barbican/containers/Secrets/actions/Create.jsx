@@ -3,6 +3,49 @@ import { ModalAction } from 'containers/Action';
 import globalSecretsStore from 'stores/barbican/secrets';
 import globalSecretStoresStore from 'stores/barbican/secret-stores';
 
+const PAYLOAD_HINTS = {
+  opaque: t('Enter any text or data (e.g. API key, password, config value)'),
+  symmetric: t(
+    'Enter a Base64-encoded symmetric key (e.g. AES key: openssl rand -base64 32)'
+  ),
+  public: t(
+    'Enter a PEM-encoded public key (begins with -----BEGIN PUBLIC KEY-----)'
+  ),
+  private: t(
+    'Enter a PEM-encoded private key (begins with -----BEGIN RSA PRIVATE KEY-----)'
+  ),
+  certificate: t(
+    'Enter a PEM-encoded certificate (begins with -----BEGIN CERTIFICATE-----)'
+  ),
+  passphrase: t('Enter a passphrase or password string'),
+};
+
+const PAYLOAD_VALIDATORS = {
+  symmetric: (val) => {
+    const b64 = /^[A-Za-z0-9+/\n\r]+=*$/;
+    return b64.test(val.trim())
+      ? null
+      : t('Symmetric key must be Base64-encoded');
+  },
+  public: (val) =>
+    val.trim().startsWith('-----BEGIN')
+      ? null
+      : t('Public key must be PEM-encoded (-----BEGIN ... -----)'),
+  private: (val) =>
+    val.trim().startsWith('-----BEGIN')
+      ? null
+      : t('Private key must be PEM-encoded (-----BEGIN ... -----)'),
+  certificate: (val) =>
+    val.trim().startsWith('-----BEGIN')
+      ? null
+      : t('Certificate must be PEM-encoded (-----BEGIN CERTIFICATE-----)'),
+};
+
+const CONTENT_TYPE_MAP = {
+  symmetric: 'application/octet-stream',
+  certificate: 'application/pkix-cert',
+};
+
 export class Create extends ModalAction {
   static id = 'create-secret';
 
@@ -19,6 +62,7 @@ export class Create extends ModalAction {
       ...this.state,
       secretStores: [],
       storesLoaded: false,
+      secretType: 'opaque',
     };
     this.fetchSecretStores();
   }
@@ -58,6 +102,9 @@ export class Create extends ModalAction {
   }
 
   get formItems() {
+    const { secretType = 'opaque' } = this.state;
+    const hint = PAYLOAD_HINTS[secretType] || PAYLOAD_HINTS.opaque;
+
     return [
       {
         name: 'name',
@@ -78,6 +125,9 @@ export class Create extends ModalAction {
           { label: t('Passphrase'), value: 'passphrase' },
         ],
         required: true,
+        onChange: (val) => {
+          this.setState({ secretType: val });
+        },
       },
       {
         name: 'secret_store',
@@ -93,7 +143,14 @@ export class Create extends ModalAction {
         name: 'payload',
         label: t('Payload'),
         type: 'textarea',
-        tip: t('The secret data to store'),
+        tip: hint,
+        validator: (rule, val) => {
+          if (!val) return Promise.resolve();
+          const validate = PAYLOAD_VALIDATORS[secretType];
+          if (!validate) return Promise.resolve();
+          const err = validate(val);
+          return err ? Promise.reject(new Error(err)) : Promise.resolve();
+        },
       },
     ];
   }
@@ -104,12 +161,9 @@ export class Create extends ModalAction {
     if (!body.payload) {
       delete body.payload;
       delete body.payload_content_type;
-    } else if (!body.payload_content_type) {
-      const typeMap = {
-        symmetric: 'application/octet-stream',
-        certificate: 'application/pkix-cert',
-      };
-      body.payload_content_type = typeMap[body.secret_type] || 'text/plain';
+    } else {
+      body.payload_content_type =
+        CONTENT_TYPE_MAP[body.secret_type] || 'text/plain';
     }
 
     const selectedStoreId = secret_store;
