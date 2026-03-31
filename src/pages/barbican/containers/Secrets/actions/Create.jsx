@@ -95,20 +95,6 @@ export class Create extends ModalAction {
         type: 'textarea',
         tip: t('The secret data to store'),
       },
-      {
-        name: 'payload_content_type',
-        label: t('Payload Content Type'),
-        type: 'select',
-        options: [
-          { label: 'text/plain', value: 'text/plain' },
-          {
-            label: 'application/octet-stream',
-            value: 'application/octet-stream',
-          },
-          { label: 'application/pkix-cert', value: 'application/pkix-cert' },
-        ],
-        hidden: !this.formRef?.current?.getFieldValue('payload'),
-      },
     ];
   }
 
@@ -118,6 +104,12 @@ export class Create extends ModalAction {
     if (!body.payload) {
       delete body.payload;
       delete body.payload_content_type;
+    } else if (!body.payload_content_type) {
+      const typeMap = {
+        symmetric: 'application/octet-stream',
+        certificate: 'application/pkix-cert',
+      };
+      body.payload_content_type = typeMap[body.secret_type] || 'text/plain';
     }
 
     const selectedStoreId = secret_store;
