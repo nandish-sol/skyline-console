@@ -3,43 +3,67 @@ import { ModalAction } from 'containers/Action';
 import globalSecretsStore from 'stores/barbican/secrets';
 import globalSecretStoresStore from 'stores/barbican/secret-stores';
 
+const ALGORITHM_OPTIONS = {
+  opaque: [],
+  symmetric: [
+    { label: 'AES', value: 'aes' },
+    { label: 'DES', value: 'des' },
+    { label: '3DES', value: '3des' },
+  ],
+  public: [
+    { label: 'RSA', value: 'rsa' },
+    { label: 'DSA', value: 'dsa' },
+    { label: 'EC', value: 'ec' },
+  ],
+  private: [
+    { label: 'RSA', value: 'rsa' },
+    { label: 'DSA', value: 'dsa' },
+    { label: 'EC', value: 'ec' },
+  ],
+  certificate: [
+    { label: 'RSA', value: 'rsa' },
+    { label: 'EC', value: 'ec' },
+  ],
+  passphrase: [],
+};
+
+const BIT_LENGTH_OPTIONS = {
+  aes: [
+    { label: '128', value: 128 },
+    { label: '192', value: 192 },
+    { label: '256', value: 256 },
+  ],
+  des: [{ label: '56', value: 56 }],
+  '3des': [{ label: '168', value: 168 }],
+  rsa: [
+    { label: '2048', value: 2048 },
+    { label: '3072', value: 3072 },
+    { label: '4096', value: 4096 },
+  ],
+  dsa: [
+    { label: '2048', value: 2048 },
+    { label: '3072', value: 3072 },
+  ],
+  ec: [
+    { label: '256', value: 256 },
+    { label: '384', value: 384 },
+    { label: '521', value: 521 },
+  ],
+};
+
+const MODE_OPTIONS = [
+  { label: 'CBC', value: 'cbc' },
+  { label: 'CTR', value: 'ctr' },
+  { label: 'GCM', value: 'gcm' },
+];
+
 const PAYLOAD_HINTS = {
   opaque: t('Any text or data: API key, password, config value, token'),
-  symmetric: t('Base64-encoded key. Generate with: openssl rand -base64 32'),
-  public: t('PEM format: must start with -----BEGIN PUBLIC KEY-----'),
-  private: t('PEM format: must start with -----BEGIN RSA PRIVATE KEY-----'),
-  certificate: t('PEM format: must start with -----BEGIN CERTIFICATE-----'),
+  symmetric: t('Base64-encoded key. Generate: openssl rand -base64 32'),
+  public: t('PEM format: -----BEGIN PUBLIC KEY-----'),
+  private: t('PEM format: -----BEGIN RSA PRIVATE KEY-----'),
+  certificate: t('PEM format: -----BEGIN CERTIFICATE-----'),
   passphrase: t('A passphrase or password string'),
-};
-
-const PAYLOAD_PLACEHOLDERS = {
-  opaque: 'my-api-key-or-secret-value',
-  symmetric: 'dGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIGtleQ==',
-  public: '-----BEGIN PUBLIC KEY-----\nMIIBIjAN...',
-  private: '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIB...',
-  certificate: '-----BEGIN CERTIFICATE-----\nMIIDXTCC...',
-  passphrase: 'my-secure-passphrase',
-};
-
-const PAYLOAD_VALIDATORS = {
-  symmetric: (val) => {
-    const b64 = /^[A-Za-z0-9+/\n\r]+=*$/;
-    return b64.test(val.trim())
-      ? null
-      : t('Symmetric key must be Base64-encoded');
-  },
-  public: (val) =>
-    val.trim().startsWith('-----BEGIN')
-      ? null
-      : t('Public key must be PEM-encoded (-----BEGIN ... -----)'),
-  private: (val) =>
-    val.trim().startsWith('-----BEGIN')
-      ? null
-      : t('Private key must be PEM-encoded (-----BEGIN ... -----)'),
-  certificate: (val) =>
-    val.trim().startsWith('-----BEGIN')
-      ? null
-      : t('Certificate must be PEM-encoded (-----BEGIN CERTIFICATE-----)'),
 };
 
 const CONTENT_TYPE_MAP = {
@@ -64,6 +88,7 @@ export class Create extends ModalAction {
       secretStores: [],
       storesLoaded: false,
       secretType: 'opaque',
+      algorithm: undefined,
     };
     this.fetchSecretStores();
   }
@@ -103,7 +128,12 @@ export class Create extends ModalAction {
   }
 
   get formItems() {
-    const { secretType = 'opaque' } = this.state;
+    const { secretType = 'opaque', algorithm } = this.state;
+    const algoOptions = ALGORITHM_OPTIONS[secretType] || [];
+    const bitOptions = algorithm ? BIT_LENGTH_OPTIONS[algorithm] || [] : [];
+    const showAlgorithm = algoOptions.length > 0;
+    const showBitLength = bitOptions.length > 0;
+    const showMode = secretType === 'symmetric';
     const hint = PAYLOAD_HINTS[secretType] || PAYLOAD_HINTS.opaque;
 
     return [
@@ -127,8 +157,33 @@ export class Create extends ModalAction {
         ],
         required: true,
         onChange: (val) => {
-          this.setState({ secretType: val });
+          this.setState({ secretType: val, algorithm: undefined });
         },
+      },
+      {
+        name: 'algorithm',
+        label: t('Algorithm'),
+        type: 'select',
+        options: algoOptions,
+        hidden: !showAlgorithm,
+        onChange: (val) => {
+          this.setState({ algorithm: val });
+        },
+      },
+      {
+        name: 'bit_length',
+        label: t('Bit Length'),
+        type: 'select',
+        options: bitOptions,
+        hidden: !showBitLength,
+      },
+      {
+        name: 'mode',
+        label: t('Mode'),
+        type: 'select',
+        options: MODE_OPTIONS,
+        hidden: !showMode,
+        tip: t('Block cipher mode (for symmetric keys)'),
       },
       {
         name: 'secret_store',
@@ -141,18 +196,31 @@ export class Create extends ModalAction {
         ),
       },
       {
+        name: 'expiration',
+        label: t('Expiration'),
+        type: 'date-picker',
+        showTime: true,
+        tip: t('Optional expiration date for this secret'),
+      },
+      {
         name: 'payload',
         label: t('Payload'),
         type: 'textarea',
         extra: hint,
-        placeholder: PAYLOAD_PLACEHOLDERS[secretType] || '',
-        validator: (rule, val) => {
-          if (!val) return Promise.resolve();
-          const validate = PAYLOAD_VALIDATORS[secretType];
-          if (!validate) return Promise.resolve();
-          const err = validate(val);
-          return err ? Promise.reject(new Error(err)) : Promise.resolve();
-        },
+      },
+      {
+        name: 'payload_content_type',
+        label: t('Payload Content Type'),
+        type: 'select',
+        options: [
+          { label: 'text/plain', value: 'text/plain' },
+          {
+            label: 'application/octet-stream',
+            value: 'application/octet-stream',
+          },
+          { label: 'application/pkix-cert', value: 'application/pkix-cert' },
+        ],
+        tip: t('Required when payload is provided'),
       },
     ];
   }
@@ -160,13 +228,23 @@ export class Create extends ModalAction {
   onSubmit = async (values) => {
     const { secret_store, ...secretData } = values;
     const body = { ...secretData };
+
+    if (body.expiration) {
+      body.expiration = body.expiration.toISOString();
+    }
+
     if (!body.payload) {
       delete body.payload;
       delete body.payload_content_type;
-    } else {
+    } else if (!body.payload_content_type) {
       body.payload_content_type =
         CONTENT_TYPE_MAP[body.secret_type] || 'text/plain';
     }
+
+    if (!body.algorithm) delete body.algorithm;
+    if (!body.bit_length) delete body.bit_length;
+    if (!body.mode) delete body.mode;
+    if (!body.expiration) delete body.expiration;
 
     const selectedStoreId = secret_store;
     const needsSwitch =
@@ -186,7 +264,7 @@ export class Create extends ModalAction {
         try {
           await this.secretStoresStore.removePreferred(selectedStoreId);
         } catch (e) {
-          // Best effort — preferred store cleanup
+          // Best effort
         }
       }
     }
