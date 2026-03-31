@@ -878,7 +878,7 @@ export class BaseStep extends Base {
         maxCount: 2,
         addText: t('Add CD-ROM'),
         addTextTips: t('CD-ROM devices'),
-        defaultItemValue: { sourceType: 'image', sourceId: undefined },
+        defaultItemValue: { sourceType: undefined, sourceId: undefined },
         images: this.cdromImages,
         volumes: this.cdromAvailableVolumes,
         extra: t(
