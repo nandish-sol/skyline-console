@@ -33,6 +33,7 @@ import {
 } from 'resources/glance/image';
 import Base from 'components/Form';
 import InstanceVolume from 'components/FormItem/InstanceVolume';
+import InstanceCdrom from 'components/FormItem/InstanceCdrom';
 import { isGpuCategory } from 'resources/nova/flavor';
 import {
   volumeTypes,
@@ -665,17 +666,14 @@ export class BaseStep extends Base {
     return !bootFromVolume;
   }
 
-  get showCdromImage() {
-    const { cdromSource } = this.state;
-    return cdromSource === 'image';
+  get cdromImages() {
+    const data = this.imageStore.list.data || [];
+    return data
+      .filter((it) => canImageCreateInstance(it))
+      .map((it) => ({ ...it, key: it.id }));
   }
 
-  get showCdromVolume() {
-    const { cdromSource } = this.state;
-    return cdromSource === 'volume';
-  }
-
-  get cdromVolumes() {
+  get cdromAvailableVolumes() {
     if (!this.cdromVolumeStore) {
       this.cdromVolumeStore = new VolumeStore();
       this.cdromVolumeStore.fetchList({ status: 'available' });
@@ -872,64 +870,21 @@ export class BaseStep extends Base {
         display: this.enableCinder,
       },
       {
-        name: 'cdromSource',
-        label: t('CD-ROM Source'),
-        type: 'radio',
-        options: [
-          { label: t('None'), value: 'none' },
-          { label: t('Image'), value: 'image' },
-          { label: t('Volume'), value: 'volume' },
-        ],
-        default: 'none',
-        tip: t('Attach an ISO image or existing volume as a CD-ROM device.'),
-      },
-      {
-        name: 'cdromImage',
-        label: t('CD-ROM Image'),
-        type: 'select-table',
-        hidden: !this.showCdromImage,
-        required: this.showCdromImage,
-        data: this.images,
-        isLoading: globalImageStore.list.isLoading,
-        isMulti: false,
-        filterParams: [
-          {
-            label: t('Name'),
-            name: 'name',
-          },
-        ],
-        columns: getImageColumns(this),
-        tabs: getImageSystemTabs(),
-        defaultTabValue: 'all',
-        extra: t('Select an image to mount as CD-ROM drive.'),
-        tabKey: 'os_distro',
-        dependencies: ['cdromSource'],
-      },
-      {
-        name: 'cdromVolume',
-        label: t('CD-ROM Volume'),
-        type: 'select-table',
-        hidden: !this.showCdromVolume,
-        required: this.showCdromVolume,
-        data: this.cdromVolumes,
-        isLoading: this.cdromVolumeStore
-          ? this.cdromVolumeStore.list.isLoading
-          : false,
-        isMulti: false,
-        filterParams: [
-          {
-            label: t('Name'),
-            name: 'name',
-          },
-        ],
-        columns: [
-          { title: t('Name'), dataIndex: 'name' },
-          { title: t('Size'), dataIndex: 'size', render: (v) => `${v} GiB` },
-          { title: t('Status'), dataIndex: 'status' },
-          { title: t('Volume Type'), dataIndex: 'volume_type' },
-        ],
-        extra: t('Select an existing volume to mount as CD-ROM drive.'),
-        dependencies: ['cdromSource'],
+        name: 'cdromDevices',
+        label: t('CD-ROM'),
+        type: 'add-select',
+        itemComponent: InstanceCdrom,
+        minCount: 0,
+        maxCount: 2,
+        addText: t('Add CD-ROM'),
+        addTextTips: t('CD-ROM devices'),
+        defaultItemValue: { sourceType: 'image', sourceId: undefined },
+        images: this.cdromImages,
+        volumes: this.cdromAvailableVolumes,
+        extra: t(
+          'Attach an ISO image or existing volume as a CD-ROM device (IDE bus).'
+        ),
+        display: this.enableCinder,
       },
     ];
   }

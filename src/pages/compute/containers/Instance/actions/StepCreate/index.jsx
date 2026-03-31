@@ -18,6 +18,7 @@ import { toJS } from 'mobx';
 import { InputNumber, Badge, message as $message } from 'antd';
 import { StepAction } from 'containers/Action';
 import globalServerStore from 'stores/nova/instance';
+import globalImageStore from 'stores/glance/image';
 import globalProjectStore from 'stores/keystone/project';
 import classnames from 'classnames';
 import { isEmpty, isFinite, isString } from 'lodash';
@@ -580,9 +581,7 @@ export class StepCreate extends StepAction {
       systemDisk,
       bootFromVolume = true,
       deleteVolumeInstance,
-      cdromImage,
-      cdromVolume,
-      cdromSource,
+      cdromDevices,
     } = values;
     const { value: sourceValue } = source;
     const imageRef =
@@ -653,42 +652,39 @@ export class StepCreate extends StepAction {
       rootVolume.boot_index = 1;
       rootVolume.device_type = 'cdrom';
     }
-    // CD-ROM: attach selected image or volume as cdrom device
-    if (
-      cdromSource === 'image' &&
-      cdromImage &&
-      cdromImage.selectedRowKeys &&
-      cdromImage.selectedRowKeys.length > 0
-    ) {
-      const cdromRow = cdromImage.selectedRows[0] || {};
-      const cdromSize = Math.max(
-        Math.ceil((cdromRow.size || 0) / 1073741824),
-        1
-      );
-      dataVolumes.push({
-        source_type: 'image',
-        destination_type: 'volume',
-        uuid: cdromImage.selectedRowKeys[0],
-        device_type: 'cdrom',
-        disk_bus: 'ide',
-        volume_size: cdromSize,
-        boot_index: -1,
-        delete_on_termination: true,
-      });
-    } else if (
-      cdromSource === 'volume' &&
-      cdromVolume &&
-      cdromVolume.selectedRowKeys &&
-      cdromVolume.selectedRowKeys.length > 0
-    ) {
-      dataVolumes.push({
-        source_type: 'volume',
-        destination_type: 'volume',
-        uuid: cdromVolume.selectedRowKeys[0],
-        device_type: 'cdrom',
-        disk_bus: 'ide',
-        boot_index: -1,
-        delete_on_termination: false,
+    // CD-ROM: attach selected images or volumes as cdrom devices
+    if (cdromDevices && cdromDevices.length > 0) {
+      cdromDevices.forEach((item) => {
+        const { sourceType, sourceId } = item.value || {};
+        if (!sourceId) return;
+        if (sourceType === 'image') {
+          const img = (globalImageStore.list.data || []).find(
+            (i) => i.id === sourceId
+          );
+          const cdromSize = img
+            ? Math.max(Math.ceil((img.size || 0) / 1073741824), 1)
+            : 1;
+          dataVolumes.push({
+            source_type: 'image',
+            destination_type: 'volume',
+            uuid: sourceId,
+            device_type: 'cdrom',
+            disk_bus: 'ide',
+            volume_size: cdromSize,
+            boot_index: -1,
+            delete_on_termination: true,
+          });
+        } else if (sourceType === 'volume') {
+          dataVolumes.push({
+            source_type: 'volume',
+            destination_type: 'volume',
+            uuid: sourceId,
+            device_type: 'cdrom',
+            disk_bus: 'ide',
+            boot_index: -1,
+            delete_on_termination: false,
+          });
+        }
       });
     }
     const volumes = isEmpty(rootVolume)

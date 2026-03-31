@@ -43,21 +43,25 @@ export default class index extends Component {
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
-    const { min, max, description } = nextProps;
+    const { min, max, description, value } = nextProps;
+    const newState = {};
+    let changed = false;
 
-    if (
-      min !== prevState.inputMin ||
-      max !== prevState.inputMax ||
-      description !== prevState.description
-    ) {
-      return {
-        inputMin: min,
-        inputMax: max,
-        description,
-      };
+    if (min !== prevState.inputMin || max !== prevState.inputMax) {
+      newState.inputMin = min;
+      newState.inputMax = max;
+      changed = true;
+    }
+    if (description !== prevState.description) {
+      newState.description = description;
+      changed = true;
+    }
+    if (value !== undefined && value !== prevState.inputValue) {
+      newState.inputValue = value;
+      changed = true;
     }
 
-    return null;
+    return changed ? newState : null;
   }
 
   onChange = (value) => {
