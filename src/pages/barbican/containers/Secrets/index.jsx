@@ -1,29 +1,29 @@
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
-import client from 'client';
 import globalSecretsStore from 'stores/barbican/secrets';
+import globalSecretStoresStore from 'stores/barbican/secret-stores';
 import { getOriginEndpoint } from 'client/client/constants';
 import actionConfigs from './actions';
 
 export class Secrets extends Base {
   init() {
     this.store = globalSecretsStore;
-    this.secretStores = [];
-    this.defaultStoreName = '-';
+    this.secretStoresStore = globalSecretStoresStore;
     this.fetchSecretStores();
   }
 
   async fetchSecretStores() {
     try {
-      const result = await client.barbican.secretStores.list();
-      this.secretStores = (result && result.secret_stores) || [];
-      const defaultStore = this.secretStores.find((s) => s.global_default);
-      if (defaultStore) {
-        this.defaultStoreName = defaultStore.name;
-      }
+      await this.secretStoresStore.fetchList();
     } catch (e) {
-      this.secretStores = [];
+      // silently fail
     }
+  }
+
+  get defaultStoreName() {
+    const stores = this.secretStoresStore.list.data || [];
+    const defaultStore = stores.find((s) => s.global_default);
+    return defaultStore ? defaultStore.name : '-';
   }
 
   get policy() {
