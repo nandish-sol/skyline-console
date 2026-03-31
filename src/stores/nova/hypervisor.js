@@ -151,29 +151,34 @@ export class HypervisorStore extends Base {
       local_gb: 0,
       local_gb_used: 0,
     };
-    const requestList = hypervisors.map((it) =>
-      this.providerClient.inventories.list(it.id)
-    );
-    const inventories = await Promise.all(requestList);
+    let inventories = [];
+    try {
+      const requestList = hypervisors.map((it) =>
+        this.providerClient.inventories.list(it.id)
+      );
+      inventories = await Promise.all(requestList);
+    } catch (e) {
+      // Placement API unavailable — use raw hypervisor data
+    }
     hypervisors.forEach((item, index) => {
-      if (item.hypervisor_type !== 'ironic') {
-        const {
-          inventories: {
-            VCPU: { allocation_ratio },
-            MEMORY_MB: { allocation_ratio: memory_ratio },
-          },
-        } = inventories[index];
-        item.vcpus *= allocation_ratio;
-        item.memory_mb *= memory_ratio;
+      if (item.hypervisor_type !== 'ironic' && inventories[index]) {
+        try {
+          const {
+            inventories: {
+              VCPU: { allocation_ratio },
+              MEMORY_MB: { allocation_ratio: memory_ratio },
+            },
+          } = inventories[index];
+          item.vcpus *= allocation_ratio;
+          item.memory_mb *= memory_ratio;
+        } catch (e) {
+          // Use raw values if placement data is incomplete
+        }
       }
       data.vcpus += item.vcpus;
       data.vcpus_used += item.vcpus_used;
       data.memory_mb += getGiBValue(item.memory_mb);
       data.memory_mb_used += getGiBValue(item.memory_mb_used);
-      // fetch storage info from prometheus
-      // data.local_gb += item.local_gb;
-      // data.local_gb_used += item.local_gb_used;
-      // fetch storage info from prometheus
     });
 
     this.overview = data;
