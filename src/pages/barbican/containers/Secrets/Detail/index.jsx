@@ -22,11 +22,14 @@ export class SecretDetail extends Base {
   }
 
   get actionConfigs() {
+    if (this.isAdminPage) {
+      return {};
+    }
     return actionConfigs;
   }
 
   get detailInfos() {
-    return [
+    const infos = [
       {
         title: t('Name'),
         dataIndex: 'name',
@@ -53,6 +56,13 @@ export class SecretDetail extends Base {
         },
       },
     ];
+    if (this.isAdminPage) {
+      infos.push({
+        title: t('Creator ID'),
+        dataIndex: 'creator_id',
+      });
+    }
+    return infos;
   }
 
   get tabs() {

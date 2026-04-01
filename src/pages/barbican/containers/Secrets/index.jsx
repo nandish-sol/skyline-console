@@ -54,7 +54,7 @@ export class Secrets extends Base {
       {
         title: t('Name'),
         dataIndex: 'name',
-        routeName: 'barbicanSecretDetail',
+        routeName: this.getRouteName('barbicanSecretDetail'),
       },
       {
         title: t('Secret Type'),

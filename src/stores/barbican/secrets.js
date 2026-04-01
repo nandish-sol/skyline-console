@@ -106,18 +106,24 @@ export class SecretsStore extends Base {
     if (!silent) {
       this.isLoading = true;
     }
-    const [itemResult, payloadResult, listenerResult] =
-      await Promise.allSettled([
-        this.client.show(id, {}, { headers: { Accept: 'application/json' } }),
-        this.payloadClient.list(id, {}, { headers: { Accept: 'text/plain' } }),
-        globalListenerStore.fetchList(),
-      ]);
-    const item = itemResult.status === 'fulfilled' ? itemResult.value : { id };
-    item.payload =
-      payloadResult.status === 'fulfilled' ? payloadResult.value : '';
-    const listeners =
-      listenerResult.status === 'fulfilled' ? listenerResult.value : [];
-    this.updateItem(item, listeners);
+    const isAdmin = window.location.pathname.indexOf('-admin') !== -1;
+    const fetches = [
+      this.client.show(id, {}, { headers: { Accept: 'application/json' } }),
+    ];
+    if (!isAdmin) {
+      fetches.push(
+        this.payloadClient.list(id, {}, { headers: { Accept: 'text/plain' } })
+      );
+      fetches.push(globalListenerStore.fetchList());
+    }
+    const results = await Promise.allSettled(fetches);
+    const item = results[0].status === 'fulfilled' ? results[0].value : { id };
+    if (!isAdmin && results.length > 1) {
+      item.payload = results[1].status === 'fulfilled' ? results[1].value : '';
+      const listeners =
+        results[2] && results[2].status === 'fulfilled' ? results[2].value : [];
+      this.updateItem(item, listeners);
+    }
     const detail = this.mapper(item || {});
     this.detail = detail;
     this.isLoading = false;
@@ -126,9 +132,13 @@ export class SecretsStore extends Base {
 
   async listDidFetch(items) {
     if (items.length === 0) return items;
-    const listeners = await globalListenerStore.fetchList();
+    let listeners = [];
+    try {
+      listeners = await globalListenerStore.fetchList();
+    } catch (e) {
+      // Octavia may be unavailable — skip listener matching
+    }
     return items.map((it) => {
-      // Determine if the certificate is used in the listener
       this.updateItem(it, listeners);
       return {
         ...it,

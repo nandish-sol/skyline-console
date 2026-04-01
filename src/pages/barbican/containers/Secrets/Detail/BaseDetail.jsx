@@ -11,22 +11,23 @@ import { Button, message, Tag } from 'antd';
 export class BaseDetail extends Base {
   constructor(props) {
     super(props);
-    this.state = {
-      ...this.state,
-      payloadVisible: false,
-    };
+    this._showPayload = false;
   }
 
   get leftCards() {
     const cards = [this.baseInfoCard];
-    if (this.detailData && this.detailData.payload) {
+    if (!this.isAdminPage && this.detailData && this.detailData.payload) {
       cards.push(this.payloadCard);
     }
     return cards;
   }
 
   get rightCards() {
-    return [this.cryptoInfoCard];
+    const cards = [this.cryptoInfoCard];
+    if (this.isAdminPage) {
+      cards.push(this.adminInfoCard);
+    }
+    return cards;
   }
 
   get detailData() {
@@ -152,33 +153,73 @@ export class BaseDetail extends Base {
     };
   }
 
-  get payloadCard() {
-    const { payloadVisible } = this.state;
-    const data = this.detailData;
-    const payload = data.payload || '';
-
-    const toggleVisibility = () => {
-      this.setState({ payloadVisible: !payloadVisible });
-      if (!payloadVisible) {
-        setTimeout(() => {
-          this.setState({ payloadVisible: false });
-        }, 30000);
-      }
-    };
-
-    const copyPayload = () => {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(payload);
-        message.success(t('Copied to clipboard'));
-      }
-    };
-
+  get adminInfoCard() {
     const options = [
       {
-        label: t('Payload'),
-        dataIndex: 'payload',
-        render: () => (
-          <div>
+        label: t('Creator ID'),
+        dataIndex: 'creator_id',
+        copyable: true,
+      },
+      {
+        label: t('Content Type'),
+        dataIndex: 'content_types',
+        render: (value) => {
+          if (value && typeof value === 'object') {
+            return value.default || JSON.stringify(value);
+          }
+          return value || '-';
+        },
+      },
+      {
+        label: t('Secret Reference'),
+        dataIndex: 'secret_ref',
+        copyable: true,
+        render: (value) => value || '-',
+      },
+    ];
+    return {
+      title: t('Admin Info'),
+      options,
+    };
+  }
+
+  get payloadCard() {
+    const self = this;
+    return {
+      title: t('Secret Payload'),
+      render: () => {
+        const data = self.detailData;
+        const payload = data.payload || '';
+        const visible = self._showPayload;
+
+        const toggleVisibility = () => {
+          self._showPayload = !self._showPayload;
+          self.forceUpdate();
+          if (self._showPayload) {
+            setTimeout(() => {
+              self._showPayload = false;
+              self.forceUpdate();
+            }, 30000);
+          }
+        };
+
+        const copyPayload = () => {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(payload);
+            message.success(t('Copied to clipboard'));
+          }
+        };
+
+        return (
+          <div
+            key="payload-card"
+            className="detail-left-card"
+            style={{ marginBottom: 24 }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>
+              {t('Secret Payload')}
+            </div>
+            <div style={{ marginBottom: 8, color: '#999' }}>{t('Payload')}</div>
             <pre
               style={{
                 background: '#f5f5f5',
@@ -192,27 +233,24 @@ export class BaseDetail extends Base {
                 whiteSpace: 'pre-wrap',
               }}
             >
-              {payloadVisible ? payload : '••••••••••••••••'}
+              {visible
+                ? payload
+                : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}
             </pre>
             <Button
               size="small"
-              icon={payloadVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              icon={visible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               onClick={toggleVisibility}
               style={{ marginRight: 8 }}
             >
-              {payloadVisible ? t('Hide') : t('Reveal')}
+              {visible ? t('Hide') : t('Reveal')}
             </Button>
             <Button size="small" icon={<CopyOutlined />} onClick={copyPayload}>
               {t('Copy')}
             </Button>
           </div>
-        ),
+        );
       },
-    ];
-
-    return {
-      title: t('Secret Payload'),
-      options,
     };
   }
 }

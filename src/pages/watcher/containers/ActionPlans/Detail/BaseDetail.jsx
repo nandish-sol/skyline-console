@@ -2,7 +2,16 @@ import React from 'react';
 import Base from 'containers/BaseDetail';
 import { inject, observer } from 'mobx-react';
 import { Link } from 'react-router-dom';
-import { Table } from 'antd';
+import { Table, Tag } from 'antd';
+
+const STATE_COLORS = {
+  SUCCEEDED: 'green',
+  FAILED: 'red',
+  PENDING: 'default',
+  ONGOING: 'processing',
+  CANCELLED: 'orange',
+  RECOMMENDED: 'blue',
+};
 
 export class BaseDetail extends Base {
   get leftCards() {
@@ -123,16 +132,37 @@ export class BaseDetail extends Base {
         title: t('Type'),
         dataIndex: 'action_type',
         key: 'action_type',
+        render: (v) => {
+          const colors = {
+            migrate: 'blue',
+            change_nova_service_state: 'purple',
+            resize: 'cyan',
+          };
+          return <Tag color={colors[v] || 'default'}>{v}</Tag>;
+        },
       },
       {
         title: t('State'),
         dataIndex: 'state',
         key: 'state',
+        render: (v) => <Tag color={STATE_COLORS[v] || 'default'}>{v}</Tag>,
       },
       {
-        title: t('Action Plan'),
-        dataIndex: 'action_plan_uuid',
-        key: 'action_plan_uuid',
+        title: t('Details'),
+        dataIndex: 'input_parameters',
+        key: 'details',
+        render: (val, rec) => {
+          if (!val || !Object.keys(val).length) return '-';
+          if (rec.action_type === 'migrate') {
+            return `${val.source_node || '?'} \u2192 ${
+              val.destination_node || '?'
+            }`;
+          }
+          if (rec.action_type === 'change_nova_service_state') {
+            return `${val.state || '?'} service`;
+          }
+          return JSON.stringify(val);
+        },
       },
     ];
 
