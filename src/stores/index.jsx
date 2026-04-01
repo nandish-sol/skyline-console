@@ -1,5 +1,6 @@
 import globalFloatingIpsStore from 'stores/neutron/floatingIp';
 import globalImageStore from 'stores/glance/image';
+import globalLicenseStore from 'stores/skyline/license';
 import globalServerStore from 'stores/nova/instance';
 import globalKeypairStore from 'stores/nova/keypair';
 import globalNetworkStore from 'stores/neutron/network';
@@ -22,6 +23,7 @@ import globalRbacPoliciesStore from 'stores/neutron/rbac-policies';
 export default {
   globalFloatingIpsStore,
   globalImageStore,
+  globalLicenseStore,
   globalServerStore,
   globalKeypairStore,
   globalNetworkStore,

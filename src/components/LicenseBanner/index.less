@@ -1,0 +1,87 @@
+@import '~styles/variables';
+
+.license-banner {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 24px;
+  font-size: 13px;
+  line-height: 22px;
+  transition: all 0.3s;
+}
+
+.license-banner-success {
+  color: #135200;
+  background-color: #f6ffed;
+  border-bottom: 1px solid #b7eb8f;
+}
+
+.license-banner-info {
+  color: #003a8c;
+  background-color: #e6f7ff;
+  border-bottom: 1px solid #91d5ff;
+}
+
+.license-banner-warning {
+  color: #614700;
+  background-color: #fffbe6;
+  border-bottom: 1px solid #ffe58f;
+}
+
+.license-banner-expired {
+  color: #a8071a;
+  background-color: #fff2f0;
+  border-bottom: 1px solid #ffccc7;
+}
+
+.license-banner-critical {
+  color: #fff;
+  background-color: #5c0011;
+  border-bottom: 1px solid #820014;
+}
+
+.license-banner-content {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+}
+
+.license-banner-icon {
+  font-size: 16px;
+}
+
+.license-banner-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.license-banner-btn {
+  padding: 2px 12px;
+  color: inherit;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.license-banner-dismiss {
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.65;
+
+  &:hover {
+    opacity: 1;
+  }
+}

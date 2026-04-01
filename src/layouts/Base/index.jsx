@@ -21,13 +21,14 @@ import { BellOutlined } from '@ant-design/icons';
 import checkItemPolicy from 'resources/skyline/policy';
 import { Layout } from 'antd';
 import GlobalHeader from 'components/Layout/GlobalHeader';
+import LicenseBanner from 'components/LicenseBanner';
+import OperationToast from 'components/OperationToast';
 import { setRouteMap, getPath } from 'utils/route-map';
 import renderAdminMenu from '../admin-menu';
 import renderMenu from '../menu';
 import renderUserMenu from '../user-menu';
 import RightContext from './Right';
 import LayoutMenu from './Menu';
-import OperationToast from 'components/OperationToast';
 import styles from './index.less';
 
 const { Header } = Layout;
@@ -268,6 +269,7 @@ export class BaseLayout extends Component {
           {/* {this.renderLogo()} */}
           {this.renderHeader()}
         </Header>
+        <LicenseBanner />
         <LayoutMenu
           pathname={pathname}
           isAdminPage={this.isAdminPage}

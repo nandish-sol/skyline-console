@@ -66,6 +66,16 @@ export class SkylineClient extends Base {
         ],
       },
       {
+        key: 'license',
+        isResource: false,
+        extendOperations: [
+          {
+            name: 'status',
+            key: 'status',
+          },
+        ],
+      },
+      {
         name: 'policies',
         key: 'policies',
         extendOperations: [

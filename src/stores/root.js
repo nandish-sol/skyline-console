@@ -165,6 +165,10 @@ export class RootStore {
       this.client.policies.list(),
     ]);
     await this.updateUser(profile, policies.policies || []);
+    // Fetch license status and start polling
+    const globalLicenseStore = require('stores/skyline/license').default;
+    globalLicenseStore.fetchLicenseStatus();
+    globalLicenseStore.startPolling();
     return this.getNeutronExtensions();
   }
 

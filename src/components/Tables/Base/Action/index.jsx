@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import checkItemPolicy, { systemRoleIsReader } from 'resources/skyline/policy';
+import globalLicenseStore from 'stores/skyline/license';
 
 export async function checkAllowed({
   item,
@@ -37,6 +38,13 @@ export async function checkAllowed({
   });
   if (!policyResult) {
     return false;
+  }
+  // License restricted mode: block actions that are not always-allowed
+  if (globalLicenseStore.restrictedMode) {
+    const actionId = (action && action.id) || actionName || '';
+    if (!globalLicenseStore.isActionAllowed(actionId)) {
+      return false;
+    }
   }
   let result = false;
   let allowedExtraResult = true;
