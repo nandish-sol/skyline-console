@@ -106,13 +106,17 @@ export class SecretsStore extends Base {
     if (!silent) {
       this.isLoading = true;
     }
-    const [item, payload, listeners] = await Promise.all([
-      this.client.show(id, {}, { headers: { Accept: 'application/json' } }),
-      this.payloadClient.list(id, {}, { headers: { Accept: 'text/plain' } }),
-      globalListenerStore.fetchList(),
-    ]);
-    item.payload = payload;
-    // Determine if the certificate is used in the listener
+    const [itemResult, payloadResult, listenerResult] =
+      await Promise.allSettled([
+        this.client.show(id, {}, { headers: { Accept: 'application/json' } }),
+        this.payloadClient.list(id, {}, { headers: { Accept: 'text/plain' } }),
+        globalListenerStore.fetchList(),
+      ]);
+    const item = itemResult.status === 'fulfilled' ? itemResult.value : { id };
+    item.payload =
+      payloadResult.status === 'fulfilled' ? payloadResult.value : '';
+    const listeners =
+      listenerResult.status === 'fulfilled' ? listenerResult.value : [];
     this.updateItem(item, listeners);
     const detail = this.mapper(item || {});
     this.detail = detail;

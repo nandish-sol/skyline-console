@@ -39,6 +39,19 @@ export class SecretDetail extends Base {
         title: t('Status'),
         dataIndex: 'status',
       },
+      {
+        title: t('Algorithm'),
+        dataIndex: 'algorithm',
+        render: (value) => {
+          if (
+            !value ||
+            (typeof value === 'object' && Object.keys(value).length === 0)
+          ) {
+            return '-';
+          }
+          return String(value);
+        },
+      },
     ];
   }
 
