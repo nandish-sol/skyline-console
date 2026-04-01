@@ -139,11 +139,22 @@ export class LiveMigrate extends ModalAction {
       option: { blockMigrate },
     } = values;
     const { id } = this.item;
+    const destHost = host ? host.selectedRows[0].service_host : null;
     const body = {
-      host: host ? host.selectedRows[0].service_host : null,
+      host: destHost,
       block_migration: blockMigrate || 'auto',
     };
-    return this.store.migrateLive({ id, body });
+    const result = this.store.migrateLive({ id, body });
+    const tracker = require('stores/global/operation-tracker');
+    tracker.default.track({
+      type: 'live-migration',
+      name: t('Migrating {name}', { name: this.item.name }),
+      resourceId: id,
+      resourceType: 'server',
+      description: t('Live migration in progress'),
+      pollFn: tracker.pollMigrationStatus,
+    });
+    return result;
   };
 }
 

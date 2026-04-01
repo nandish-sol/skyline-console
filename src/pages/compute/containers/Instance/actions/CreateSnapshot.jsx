@@ -272,7 +272,17 @@ export class CreateSnapshot extends ModalAction {
   onSubmit = (values) => {
     const { snapshot } = values;
     const { id } = this.item;
-    return this.store.createImage({ id, image: snapshot });
+    const result = this.store.createImage({ id, image: snapshot });
+    const tracker = require('stores/global/operation-tracker');
+    tracker.default.track({
+      type: 'snapshot',
+      name: t('Creating snapshot of {name}', { name: this.item.name }),
+      resourceId: id,
+      resourceType: 'server',
+      description: t('Snapshot in progress'),
+      pollFn: tracker.pollServerStatus,
+    });
+    return result;
   };
 }
 

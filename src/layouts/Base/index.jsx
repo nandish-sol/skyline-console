@@ -27,6 +27,7 @@ import renderMenu from '../menu';
 import renderUserMenu from '../user-menu';
 import RightContext from './Right';
 import LayoutMenu from './Menu';
+import OperationToast from 'components/OperationToast';
 import styles from './index.less';
 
 const { Header } = Layout;
@@ -281,6 +282,7 @@ export class BaseLayout extends Component {
           currentRoutes={currentRoutes}
           isAdminPage={this.isAdminPage}
         />
+        <OperationToast />
       </div>
     );
   }
