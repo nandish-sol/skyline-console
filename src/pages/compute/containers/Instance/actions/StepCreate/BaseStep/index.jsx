@@ -94,42 +94,12 @@ export class BaseStep extends Base {
   }
 
   get availableZones() {
-    const zones = (globalAvailabilityZoneStore.list.data || [])
+    return (globalAvailabilityZoneStore.list.data || [])
       .filter((it) => it.zoneState.available)
       .map((it) => ({
         value: it.zoneName,
         label: it.zoneName,
       }));
-    if (!this.isUserAdmin) {
-      return zones;
-    }
-    // For admin: add grouped pin-to-host options
-    const hypervisors = globalHypervisorStore.list.data || [];
-    const pinOptions = [];
-    zones.forEach((zone) => {
-      hypervisors.forEach((h) => {
-        const host = h.hypervisor_hostname || h.service_host;
-        if (host) {
-          pinOptions.push({
-            value: `${zone.value}:${host}`,
-            label: `${zone.value}:${host}`,
-          });
-        }
-      });
-    });
-    if (pinOptions.length === 0) {
-      return zones;
-    }
-    return [
-      {
-        label: t('Available Zones'),
-        options: zones,
-      },
-      {
-        label: t('Pin to Host'),
-        options: pinOptions,
-      },
-    ];
   }
 
   get images() {

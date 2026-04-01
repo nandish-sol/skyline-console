@@ -22,6 +22,10 @@ export class BaseDetail extends Base {
     return [];
   }
 
+  get leftCardsStyle() {
+    return { width: '100%', maxWidth: '100%', flex: 'none' };
+  }
+
   get baseInfoCard() {
     const options = [
       {

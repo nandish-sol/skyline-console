@@ -251,6 +251,79 @@ export class XAVSHealth extends Component {
     );
   }
 
+  renderGaleraCard() {
+    const { mariadb } = this.state.data;
+    if (!mariadb) return null;
+    const items = [
+      {
+        label: t('Cluster Status'),
+        value: mariadb.cluster_status || '-',
+        color: mariadb.cluster_status === 'Primary' ? '#52c41a' : '#faad14',
+      },
+      {
+        label: t('Local State'),
+        value: mariadb.local_state || '-',
+        color: mariadb.local_state === 'Synced' ? '#52c41a' : '#faad14',
+      },
+      {
+        label: t('Cluster Size'),
+        value: mariadb.cluster_size ? `${mariadb.cluster_size} nodes` : '-',
+      },
+      { label: t('Uptime'), value: mariadb.uptime || '-' },
+      { label: t('Threads'), value: mariadb.threads_connected || '-' },
+      {
+        label: t('Connected'),
+        value: mariadb.connected ? t('Yes') : t('No'),
+        color: mariadb.connected ? '#52c41a' : '#f5222d',
+      },
+    ];
+    if (mariadb.provider_version) {
+      items.push({
+        label: t('Galera Version'),
+        value: mariadb.provider_version,
+      });
+    }
+    return (
+      <Card
+        title={
+          <span>
+            <DatabaseOutlined style={{ marginRight: 8 }} />
+            {t('Galera Cluster')}
+            {mariadb.ready ? (
+              <Tag style={{ marginLeft: 8 }} color="success">
+                {t('READY')}
+              </Tag>
+            ) : (
+              <Tag style={{ marginLeft: 8 }} color="error">
+                {t('NOT READY')}
+              </Tag>
+            )}
+          </span>
+        }
+        size="small"
+        style={{ height: '100%' }}
+      >
+        {items.map((item) => (
+          <div
+            key={item.label}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '8px 0',
+              borderBottom: '1px solid #f0f0f0',
+              fontSize: 14,
+            }}
+          >
+            <span style={{ color: '#666' }}>{item.label}</span>
+            <span style={{ fontWeight: 600, color: item.color || '#333' }}>
+              {item.value}
+            </span>
+          </div>
+        ))}
+      </Card>
+    );
+  }
+
   renderServicesTable() {
     const { services } = this.state.data;
     if (!services || services.length === 0) return null;
@@ -298,8 +371,8 @@ export class XAVSHealth extends Component {
     ];
 
     return (
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col span={infraServices.length > 0 ? 16 : 24}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16, display: 'flex' }}>
+        <Col span={16} style={{ display: 'flex' }}>
           <Card
             title={
               <span>
@@ -308,6 +381,7 @@ export class XAVSHealth extends Component {
               </span>
             }
             size="small"
+            style={{ flex: 1 }}
           >
             <Table
               columns={columns}
@@ -318,27 +392,9 @@ export class XAVSHealth extends Component {
             />
           </Card>
         </Col>
-        {infraServices.length > 0 && (
-          <Col span={8}>
-            <Card
-              title={
-                <span>
-                  <ClusterOutlined style={{ marginRight: 8 }} />
-                  {t('Cluster Nodes')}
-                </span>
-              }
-              size="small"
-            >
-              <Table
-                columns={columns}
-                dataSource={infraServices}
-                rowKey="service"
-                size="small"
-                pagination={false}
-              />
-            </Card>
-          </Col>
-        )}
+        <Col span={8} style={{ display: 'flex' }}>
+          {this.renderGaleraCard()}
+        </Col>
       </Row>
     );
   }
