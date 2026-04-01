@@ -1,24 +1,14 @@
 import React from 'react';
 import { Select, Row, Col, Form } from 'antd';
-import PropTypes from 'prop-types';
 import { toJS } from 'mobx';
+import { observer } from 'mobx-react';
+import globalImageStore from 'stores/glance/image';
+import { VolumeStore } from 'stores/cinder/volume';
 import styles from './index.less';
 
 const { OptGroup, Option } = Select;
 
-export default class InstanceCdrom extends React.Component {
-  static propTypes = {
-    value: PropTypes.any,
-    images: PropTypes.array,
-    volumes: PropTypes.array,
-  };
-
-  static defaultProps = {
-    value: {},
-    images: [],
-    volumes: [],
-  };
-
+class InstanceCdrom extends React.Component {
   constructor(props) {
     super(props);
     const { sourceType, sourceId } = props.value || {};
@@ -26,6 +16,8 @@ export default class InstanceCdrom extends React.Component {
       sourceType: sourceType || undefined,
       sourceId: sourceId || undefined,
     };
+    this.volumeStore = new VolumeStore();
+    this.volumeStore.fetchList({ status: 'available' });
   }
 
   componentDidMount() {
@@ -33,7 +25,6 @@ export default class InstanceCdrom extends React.Component {
   }
 
   onSourceChange = (value) => {
-    // value format: "image::<id>" or "volume::<id>"
     if (!value) {
       this.setState(
         { sourceType: undefined, sourceId: undefined },
@@ -63,8 +54,10 @@ export default class InstanceCdrom extends React.Component {
 
   render() {
     const { name } = this.props;
-    const images = toJS(this.props.images) || [];
-    const volumes = toJS(this.props.volumes) || [];
+    const images = toJS(globalImageStore.list.data) || [];
+    const volumes = (toJS(this.volumeStore.list.data) || []).filter(
+      (v) => v.status === 'available'
+    );
     const compositeValue = this.getCompositeValue();
 
     return (
@@ -86,7 +79,12 @@ export default class InstanceCdrom extends React.Component {
                   {images.map((img) => (
                     <Option key={`image::${img.id}`} value={`image::${img.id}`}>
                       {img.name} (
-                      {Math.max(Math.ceil((img.size || 0) / 1073741824), 1)}{' '}
+                      {Math.max(
+                        Math.ceil(
+                          (img.virtual_size || img.size || 0) / 1073741824
+                        ),
+                        img.min_disk || 1
+                      )}{' '}
                       GiB)
                     </Option>
                   ))}
@@ -111,3 +109,5 @@ export default class InstanceCdrom extends React.Component {
     );
   }
 }
+
+export default observer(InstanceCdrom);

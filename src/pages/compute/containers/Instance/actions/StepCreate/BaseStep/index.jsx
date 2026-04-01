@@ -83,6 +83,7 @@ export class BaseStep extends Base {
       source,
       project: this.currentProjectName,
       dataDisk: [],
+      cdromDevices: [],
     };
     if (source.value === 'image') {
       values.bootFromVolume = true;

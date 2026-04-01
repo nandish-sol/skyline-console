@@ -661,9 +661,11 @@ export class StepCreate extends StepAction {
           const img = (globalImageStore.list.data || []).find(
             (i) => i.id === sourceId
           );
-          const cdromSize = img
-            ? Math.max(Math.ceil((img.size || 0) / 1073741824), 1)
-            : 1;
+          const imgBytes = img ? img.virtual_size || img.size || 0 : 0;
+          const cdromSize = Math.max(
+            Math.ceil(imgBytes / 1073741824),
+            img?.min_disk || 1
+          );
           dataVolumes.push({
             source_type: 'image',
             destination_type: 'volume',
@@ -672,7 +674,7 @@ export class StepCreate extends StepAction {
             disk_bus: 'ide',
             volume_size: cdromSize,
             boot_index: -1,
-            delete_on_termination: true,
+            delete_on_termination: false,
           });
         } else if (sourceType === 'volume') {
           dataVolumes.push({
