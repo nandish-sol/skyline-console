@@ -21,6 +21,7 @@ import PropTypes from 'prop-types';
 import Notify from 'components/Notify';
 import classnames from 'classnames';
 import { firstUpperCase, allSettled } from 'utils';
+import globalLicenseStore from 'stores/skyline/license';
 import styles from './index.less';
 
 export const getDefaultMsg = (action, data) => {
@@ -565,13 +566,24 @@ export class ActionButton extends Component {
       maxLength,
       isFirstAction,
     } = this.props;
-    if (!isAllowed && needHide) {
+
+    // License restriction: disable (not hide) when license expired
+    const licenseBlocked =
+      globalLicenseStore.restrictedMode &&
+      !globalLicenseStore.isActionAllowed(id || title || '');
+    const effectiveDisabled = !isAllowed || licenseBlocked;
+
+    // Only hide if not allowed AND not license-blocked (license = disable, not hide)
+    if (!isAllowed && needHide && !licenseBlocked) {
       return null;
     }
+
     const buttonText = name || title;
-    let showTip = false;
-    if (isFirstAction && buttonText && buttonText.length > maxLength) {
-      showTip = true;
+    let tipText = null;
+    if (licenseBlocked) {
+      tipText = t('License expired. This action is disabled.');
+    } else if (isFirstAction && buttonText && buttonText.length > maxLength) {
+      tipText = buttonText;
     }
     const button = (
       <Button
@@ -579,15 +591,15 @@ export class ActionButton extends Component {
         danger={isDanger}
         onClick={this.onClick}
         key={id}
-        disabled={!isAllowed}
+        disabled={effectiveDisabled}
         className={buttonClassName}
         style={style}
       >
         {name || title}
       </Button>
     );
-    const buttonRender = showTip ? (
-      <Tooltip title={buttonText}>{button}</Tooltip>
+    const buttonRender = tipText ? (
+      <Tooltip title={tipText}>{button}</Tooltip>
     ) : (
       button
     );

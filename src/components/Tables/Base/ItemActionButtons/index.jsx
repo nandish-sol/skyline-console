@@ -18,6 +18,7 @@ import { Menu, Dropdown, Button, Divider } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { isArray, isEqual } from 'lodash';
 import classnames from 'classnames';
+import globalLicenseStore from 'stores/skyline/license';
 import { getAllowedResults, getAction } from '../Action';
 import ActionButton from '../ActionButton';
 import styles from './index.less';
@@ -103,7 +104,11 @@ function DropdownActionButton({
         const isAllowed = getIsAllowedValue(alloweds, it.allowedIndex);
         const key = it.key || `key-more-${index}`;
         const config = getActionConf(it.action, item);
-        if (!isAllowed) {
+        // Show license-disabled items (greyed out) instead of hiding
+        const licenseBlocked =
+          globalLicenseStore.restrictedMode &&
+          !globalLicenseStore.isActionAllowed(config.id || config.title || '');
+        if (!isAllowed && !licenseBlocked) {
           return null;
         }
         allowedFatherCount += 1;
