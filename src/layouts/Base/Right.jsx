@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { inject, observer } from 'mobx-react';
 import classnames from 'classnames';
 import renderRoutes from 'utils/RouterConfig';
+import LicenseBanner from 'components/LicenseBanner';
 import NotFound from 'components/Cards/NotFound';
 import PageLoading from 'components/PageLoading';
 import { getPath } from 'utils/route-map';
@@ -181,6 +182,7 @@ export class Right extends Component {
         )}
       >
         <Content className={styles.content}>
+          <LicenseBanner />
           {breadcrumb}
           <Suspense fallback={<PageLoading className="sl-page-loading" />}>
             {children}
