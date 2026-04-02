@@ -410,6 +410,26 @@ export class ParamSetting extends Base {
         ),
       },
       {
+        name: 'memoryHotplugMode',
+        label: t('Memory Hotplug Mode'),
+        type: 'select',
+        hidden: !enableHotadd || isBareMetal,
+        required: enableHotadd && !isBareMetal,
+        options: [
+          {
+            label: t('DIMM Hotplug (increase only)'),
+            value: 'dimm',
+          },
+          {
+            label: t('virtio-mem (increase and decrease)'),
+            value: 'virtiomem',
+          },
+        ],
+        tip: t(
+          'DIMM: traditional memory hotplug, can only add memory. virtio-mem: bidirectional, requires q35 machine type.'
+        ),
+      },
+      {
         name: 'bandwidth',
         label: t('Internal Network Bandwidth (Gbps)'),
         type: 'input-int',

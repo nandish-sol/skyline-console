@@ -126,6 +126,7 @@ export class StepCreate extends StepAction {
       enableHotadd,
       minimumCpu,
       minimumMemoryGb,
+      memoryHotplugMode,
     } = values;
     const body = {
       name,
@@ -200,6 +201,10 @@ export class StepCreate extends StepAction {
       }
       if (minimumMemoryGb) {
         extraSpecs.minimum_memory = `${minimumMemoryGb * 1024}`;
+      }
+      if (memoryHotplugMode === 'virtiomem') {
+        extraSpecs['hw:mem_hotplug_virtio'] = 'true';
+        extraSpecs['hw:machine_type'] = 'q35';
       }
     }
     return {

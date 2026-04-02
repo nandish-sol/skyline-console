@@ -152,6 +152,13 @@ const renderMenu = (t) => {
           ],
         },
         {
+          path: '/compute/pci-admin',
+          name: t('PCI Devices'),
+          key: 'pciAdmin',
+          level: 1,
+          children: [],
+        },
+        {
           path: '/compute/aggregates-admin',
           name: t('Host Aggregates'),
           key: 'aggregateAdmin',

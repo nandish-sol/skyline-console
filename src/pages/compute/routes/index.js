@@ -32,6 +32,7 @@ import ServerGroupDetail from '../containers/ServerGroup/Detail';
 import ImageDetail from '../containers/Image/Detail';
 import Hypervisors from '../containers/Hypervisors';
 import HypervisorDetail from '../containers/Hypervisors/Hypervisor/Detail';
+import PCIDevices from '../containers/PCI';
 import HostAggregate from '../containers/HostAggregate';
 import BareMetalNode from '../containers/BareMetalNode';
 import BareMetalNodeDetail from '../containers/BareMetalNode/Detail';
@@ -142,6 +143,11 @@ export default [
       {
         path: `${PATH}/hypervisors-admin/detail/:id`,
         component: HypervisorDetail,
+        exact: true,
+      },
+      {
+        path: `${PATH}/pci-admin`,
+        component: PCIDevices,
         exact: true,
       },
       {

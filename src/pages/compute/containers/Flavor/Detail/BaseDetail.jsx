@@ -32,6 +32,9 @@ export class BaseDetail extends Base {
     const isGPUType = isGpuCategory(category);
     const typeIsComputeOptimized = isComputeOptimized(category);
     const cards = [this.baseInfoCard];
+    if (this.hotAddCard) {
+      cards.push(this.hotAddCard);
+    }
     if (disk) {
       cards.push(this.diskCard);
     }
@@ -243,6 +246,51 @@ export class BaseDetail extends Base {
     const options = [...numa, ...others];
     return {
       title: t('Compute Optimized Info'),
+      options,
+    };
+  }
+
+  get hotAddCard() {
+    const { originData: { extra_specs: extra = {} } = {} } = this.detailData;
+    const minCpu = extra.minimum_cpu;
+    const minMemory = extra.minimum_memory;
+    if (!minCpu && !minMemory) {
+      return null;
+    }
+    const hasVirtiomem = extra['hw:mem_hotplug_virtio'] === 'true';
+    const options = [
+      {
+        label: t('Minimum vCPUs'),
+        dataIndex: 'minimum_cpu_display',
+        render: () => minCpu || '-',
+      },
+      {
+        label: t('Minimum Memory'),
+        dataIndex: 'minimum_memory_display',
+        render: () => {
+          if (!minMemory) return '-';
+          const gb = Math.round(parseInt(minMemory, 10) / 1024);
+          return `${gb} GiB (${minMemory} MB)`;
+        },
+      },
+      {
+        label: t('Memory Hotplug Mode'),
+        dataIndex: 'mem_hotplug_mode',
+        render: () =>
+          hasVirtiomem
+            ? t('virtio-mem (bidirectional)')
+            : t('DIMM (increase only)'),
+      },
+    ];
+    if (hasVirtiomem) {
+      options.push({
+        label: t('Machine Type'),
+        dataIndex: 'machine_type_display',
+        render: () => extra['hw:machine_type'] || 'q35',
+      });
+    }
+    return {
+      title: t('Hot-Add Configuration'),
       options,
     };
   }
