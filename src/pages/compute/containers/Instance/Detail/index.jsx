@@ -26,6 +26,7 @@ import VirtualAdapter from 'pages/network/containers/Port';
 import actionConfigsRecycleBin from 'pages/management/containers/RecycleBin/actions';
 import { toJS } from 'mobx';
 import BaseDetail from './BaseDetail';
+import PCIDeviceList from './PCI';
 import SecurityGroup from './SecurityGroup';
 import ActionLog from './ActionLog';
 import Snapshots from '../../InstanceSnapshot';
@@ -143,6 +144,11 @@ export class InstanceDetail extends Base {
         title: t('Security Groups'),
         key: 'securityGroup',
         component: SecurityGroup,
+      },
+      {
+        title: t('PCI Devices'),
+        key: 'pciDevices',
+        component: PCIDeviceList,
       },
       {
         title: t('Action Logs'),

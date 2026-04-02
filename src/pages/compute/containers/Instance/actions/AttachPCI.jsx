@@ -27,10 +27,10 @@ export class AttachPCI extends ModalAction {
   init() {
     this.state = {
       ...this.state,
-      pciDevices: [],
+      pciPools: [],
       loading: true,
     };
-    this.fetchPCIDevices();
+    this.fetchPCIPools();
   }
 
   get name() {
@@ -44,9 +44,8 @@ export class AttachPCI extends ModalAction {
   static allowed = (item) =>
     Promise.resolve(AttachPCI.isActive(item) && isNotLockedOrAdmin(item));
 
-  async fetchPCIDevices() {
+  async fetchPCIPools() {
     try {
-      // Get the compute host for this instance
       const host =
         this.item['OS-EXT-SRV-ATTR:host'] ||
         this.item['OS-EXT-SRV-ATTR:hypervisor_hostname'];
@@ -56,39 +55,39 @@ export class AttachPCI extends ModalAction {
         return;
       }
 
-      // List hypervisors to find the right one
-      const hypervisorsResult = await client.nova.hypervisors.list();
-      const hypervisors =
-        hypervisorsResult.hypervisors || hypervisorsResult || [];
+      // List hypervisors to find PCI pools on the instance's host
+      const result = await client.nova.hypervisors.listDetail();
+      const hypervisors = result.hypervisors || result || [];
       const hypervisor = hypervisors.find(
         (h) =>
           h.hypervisor_hostname === host ||
           (h.service && h.service.host === host)
       );
 
+      const pools = [];
       if (hypervisor) {
-        // Get PCI devices from hypervisor
-        const pciResult = await client.nova.hypervisors.pci.list(hypervisor.id);
-        const devices = pciResult.pci_devices || pciResult || [];
-        this.setState({
-          pciDevices: devices,
-          loading: false,
-        });
-      } else {
-        this.setState({ loading: false });
+        const pciStats =
+          hypervisor.pci_stats || hypervisor.pci_device_pools || [];
+        if (Array.isArray(pciStats)) {
+          pciStats.forEach((pool) => {
+            if (pool.count > 0) {
+              pools.push({
+                vendor_id: pool.vendor_id || '',
+                product_id: pool.product_id || '',
+                count: pool.count || 0,
+                device_type: pool.dev_type || pool.device_type || '',
+                numa_node: pool.numa_node,
+                address: pool.address || '',
+              });
+            }
+          });
+        }
       }
+
+      this.setState({ pciPools: pools, loading: false });
     } catch (e) {
       this.setState({ loading: false });
     }
-  }
-
-  getDeviceLabel(device) {
-    const type = device.device_type || device.dev_type || 'unknown';
-    const vendor = device.vendor_id || 'N/A';
-    const product = device.product_id || 'N/A';
-    const address = device.address || device.pci_address || '';
-    const count = device.count !== undefined ? ` (${device.count} avail)` : '';
-    return `${address} [${vendor}:${product}] ${type}${count}`;
   }
 
   get defaultValue() {
@@ -98,12 +97,22 @@ export class AttachPCI extends ModalAction {
   }
 
   get formItems() {
-    const { pciDevices, loading } = this.state;
+    const { pciPools, loading } = this.state;
 
-    const deviceOptions = pciDevices.map((device, idx) => ({
-      label: this.getDeviceLabel(device),
-      value: device.address || device.pci_address || `device-${idx}`,
-    }));
+    const deviceOptions = pciPools.map((pool, idx) => {
+      const vid = pool.vendor_id || '?';
+      const pid = pool.product_id || '?';
+      const dtype = pool.device_type || '';
+      const count = pool.count || 0;
+      const addr = pool.address || '';
+      const label = addr
+        ? `${addr} [${vid}:${pid}] ${dtype} (${count} avail)`
+        : `[${vid}:${pid}] ${dtype} (${count} avail)`;
+      return {
+        label,
+        value: addr || `${vid}:${pid}:${idx}`,
+      };
+    });
 
     return [
       {
@@ -115,27 +124,37 @@ export class AttachPCI extends ModalAction {
       {
         name: 'pci_address',
         label: t('PCI Device'),
-        type: 'select',
-        options: deviceOptions,
+        type: deviceOptions.length > 0 ? 'select' : 'input',
+        options: deviceOptions.length > 0 ? deviceOptions : undefined,
         required: true,
         loading,
         placeholder: loading
           ? t('Loading available devices...')
           : deviceOptions.length === 0
-          ? t('No PCI devices available')
+          ? t(
+              'No PCI pools found. Enter device address manually (e.g. 0000:8b:00.0)'
+            )
           : t('Select a PCI device'),
-        disabled: deviceOptions.length === 0,
+        tip:
+          deviceOptions.length === 0
+            ? t(
+                'PCI address format: DDDD:BB:SS.F (e.g. 0000:8b:00.0). Ensure the device is bound to vfio-pci on the host.'
+              )
+            : undefined,
       },
     ];
   }
 
   onSubmit = (values) => {
     const { id } = this.item;
-    const { pci_address } = values;
+    const { pci_address: addr } = values;
+    // Extract actual address if it was from a pool selection with format "vid:pid:idx"
+    const pciAddress = addr.includes('.')
+      ? addr
+      : addr.split(':').slice(0, -1).join(':');
     const body = {
-      pciDeviceAttachment: { address: pci_address },
+      pciDeviceAttachment: { address: pciAddress },
     };
-    // POST /servers/{id}/os-pci-devices
     return client.nova.servers.pciDevices.create(id, body);
   };
 }

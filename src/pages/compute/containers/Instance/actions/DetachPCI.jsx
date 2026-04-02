@@ -49,8 +49,10 @@ export class DetachPCI extends ModalAction {
   async fetchAttachedDevices() {
     try {
       const { id } = this.item;
+      // GET /servers/{id}/os-pci-devices
       const result = await client.nova.servers.pciDevices.list(id);
-      const devices = result.pci_devices || result || [];
+      const devices =
+        result.pciDeviceAttachments || result.pci_devices || result || [];
       this.setState({
         attachedDevices: Array.isArray(devices) ? devices : [],
         loading: false,
@@ -58,14 +60,6 @@ export class DetachPCI extends ModalAction {
     } catch (e) {
       this.setState({ loading: false });
     }
-  }
-
-  getDeviceLabel(device) {
-    const address = device.address || device.pci_address || '';
-    const vendor = device.vendor_id || '';
-    const product = device.product_id || '';
-    const type = device.device_type || device.dev_type || '';
-    return `${address} [${vendor}:${product}] ${type}`.trim();
   }
 
   get defaultValue() {
@@ -77,11 +71,18 @@ export class DetachPCI extends ModalAction {
   get formItems() {
     const { attachedDevices, loading } = this.state;
 
-    const deviceOptions = attachedDevices.map((device, idx) => ({
-      label: this.getDeviceLabel(device),
-      value:
-        device.address || device.pci_address || device.id || `device-${idx}`,
-    }));
+    const deviceOptions = attachedDevices.map((device) => {
+      const addr = device.address || device.pci_address || '';
+      const vid = device.vendor_id || '';
+      const pid = device.product_id || '';
+      const dtype = device.device_type || device.dev_type || '';
+      const label =
+        `${addr} [${vid}:${pid}] ${dtype}`.trim() || `ID: ${device.id}`;
+      return {
+        label,
+        value: String(device.id),
+      };
+    });
 
     return [
       {
@@ -100,7 +101,7 @@ export class DetachPCI extends ModalAction {
         placeholder: loading
           ? t('Loading attached devices...')
           : deviceOptions.length === 0
-          ? t('No PCI devices attached')
+          ? t('No PCI devices attached to this instance')
           : t('Select device to detach'),
         disabled: deviceOptions.length === 0,
       },
@@ -109,12 +110,9 @@ export class DetachPCI extends ModalAction {
 
   onSubmit = (values) => {
     const { id } = this.item;
-    const { device_id } = values;
-    const body = {
-      detach_pci_device: { address: device_id },
-    };
-    // POST /servers/{id}/action
-    return client.nova.servers.action(id, body);
+    const { device_id: deviceId } = values;
+    // DELETE /servers/{id}/os-pci-devices/{device_id}
+    return client.nova.servers.pciDevices.delete(id, deviceId);
   };
 }
 

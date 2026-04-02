@@ -12,28 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import React from 'react'; // eslint-disable-line no-unused-vars
 import { observer, inject } from 'mobx-react';
+import { Tag } from 'antd';
 import Base from 'containers/List';
 import { PCIDeviceStore } from 'stores/nova/pci';
 
-const PCI_VENDOR_MAP = {
-  '10de': 'NVIDIA',
-  8086: 'Intel',
-  1002: 'AMD',
-  '15b3': 'Mellanox',
-  '14e4': 'Broadcom',
-  '1af4': 'Red Hat (virtio)',
-  '1b36': 'QEMU',
-  '19e5': 'Huawei',
-  '1d94': 'Xilinx',
-  '1dd8': 'Pensando',
-};
-
-const PCI_DEV_TYPE_MAP = {
-  'type-PCI': 'PCI Passthrough',
-  'type-PF': 'SR-IOV PF',
-  'type-VF': 'SR-IOV VF',
-  vdpa: 'vDPA',
+// Device type display names — these are Nova PCI device type constants
+const DEV_TYPE_LABELS = {
+  'type-PCI': { text: 'Passthrough', color: 'blue' },
+  'type-PF': { text: 'SR-IOV PF', color: 'green' },
+  'type-VF': { text: 'SR-IOV VF', color: 'cyan' },
+  vdpa: { text: 'vDPA', color: 'purple' },
 };
 
 export class PCIDevices extends Base {
@@ -58,41 +48,57 @@ export class PCIDevices extends Base {
       title: t('Host'),
       dataIndex: 'host',
       isHideable: true,
+      sorter: true,
     },
     {
-      title: t('Vendor'),
-      dataIndex: 'vendor_id',
-      render: (value) => {
-        const vid = String(value || '').toLowerCase();
-        const name = PCI_VENDOR_MAP[vid];
-        return name ? `${name} (${vid})` : vid || '-';
+      title: t('Vendor:Product'),
+      dataIndex: 'vendor_product',
+      isHideable: true,
+      render: (_, record) => {
+        const vid = record.vendor_id || '?';
+        const pid = record.product_id || '?';
+        return `${vid}:${pid}`;
       },
-      isHideable: true,
-    },
-    {
-      title: t('Product ID'),
-      dataIndex: 'product_id',
-      isHideable: true,
     },
     {
       title: t('Device Type'),
       dataIndex: 'device_type',
-      render: (value) => PCI_DEV_TYPE_MAP[value] || value || '-',
       isHideable: true,
+      render: (value) => {
+        const info = DEV_TYPE_LABELS[value];
+        if (info) {
+          return <Tag color={info.color}>{info.text}</Tag>;
+        }
+        return value || '-';
+      },
     },
     {
       title: t('NUMA Node'),
       dataIndex: 'numa_node',
+      isHideable: true,
       render: (value) =>
         value === null || value === undefined || value === -1
           ? t('Any')
           : String(value),
-      isHideable: true,
     },
     {
       title: t('Available'),
       dataIndex: 'count',
+      sorter: true,
       isHideable: true,
+    },
+    {
+      title: t('Tags'),
+      dataIndex: 'tags',
+      isHideable: true,
+      render: (tags) => {
+        if (!tags || typeof tags !== 'object') return '-';
+        const entries = Object.entries(tags).filter(
+          ([, v]) => v !== undefined && v !== null
+        );
+        if (entries.length === 0) return '-';
+        return entries.map(([k, v]) => `${k}=${v}`).join(', ');
+      },
     },
   ];
 
@@ -105,6 +111,16 @@ export class PCIDevices extends Base {
       {
         label: t('Vendor ID'),
         name: 'vendor_id',
+      },
+      {
+        label: t('Device Type'),
+        name: 'device_type',
+        options: [
+          { key: 'type-PCI', label: t('Passthrough') },
+          { key: 'type-PF', label: t('SR-IOV PF') },
+          { key: 'type-VF', label: t('SR-IOV VF') },
+          { key: 'vdpa', label: t('vDPA') },
+        ],
       },
     ];
   }
