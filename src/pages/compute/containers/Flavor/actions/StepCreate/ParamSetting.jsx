@@ -430,6 +430,22 @@ export class ParamSetting extends Base {
         ),
       },
       {
+        name: 'pci-title',
+        label: t('PCI Passthrough'),
+        type: 'title',
+        hidden: isBareMetal,
+      },
+      {
+        name: 'pciAlias',
+        label: t('PCI Device Alias'),
+        type: 'input',
+        hidden: isBareMetal,
+        placeholder: 'e.g. fc_hba:1, gpu_nvidia:2',
+        tip: t(
+          'Nova PCI alias and count (alias:count). The alias must match a pci.alias defined in nova.conf. Leave empty for no PCI passthrough.'
+        ),
+      },
+      {
         name: 'bandwidth',
         label: t('Internal Network Bandwidth (Gbps)'),
         type: 'input-int',

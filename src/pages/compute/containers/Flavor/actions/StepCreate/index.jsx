@@ -127,6 +127,7 @@ export class StepCreate extends StepAction {
       minimumCpu,
       minimumMemoryGb,
       memoryHotplugMode,
+      pciAlias,
     } = values;
     const body = {
       name,
@@ -206,6 +207,10 @@ export class StepCreate extends StepAction {
         extraSpecs['hw:mem_hotplug_virtio'] = 'true';
         extraSpecs['hw:machine_type'] = 'q35';
       }
+    }
+    // XLoud: PCI passthrough alias (e.g. "fc_hba:1", "gpu_nvidia:2")
+    if (pciAlias && !isBareMetal(architecture)) {
+      extraSpecs['pci_passthrough:alias'] = pciAlias.trim();
     }
     return {
       body,

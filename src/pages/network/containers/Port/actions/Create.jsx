@@ -358,7 +358,9 @@ export class CreateAction extends ModalAction {
         label: t('Port Type'),
         type: 'select',
         options: portTypeItems,
-        hidden: !more,
+        tip: t(
+          'Use "direct" for SR-IOV passthrough, "normal" for standard OVS ports.'
+        ),
       },
       {
         name: 'enableQosPolicy',

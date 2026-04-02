@@ -16,6 +16,7 @@ import CreateAction from './Create';
 // import EditAction from './Edit';
 import DeleteAction from '../../actions/Delete';
 import ManageAccess from '../../actions/ManageAccess';
+import ManageMetadata from '../../actions/ManageMetadata';
 
 const actionConfigs = {
   rowActions: {
@@ -24,6 +25,9 @@ const actionConfigs = {
     moreActions: [
       {
         action: ManageAccess,
+      },
+      {
+        action: ManageMetadata,
       },
     ],
   },
