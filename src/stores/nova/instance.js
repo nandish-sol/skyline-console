@@ -148,17 +148,21 @@ export class ServerStore extends Base {
       return newData;
     }
     const { members, isServerGroup, host } = filters;
-    const isoImages = await this.imageClient.list({ disk_format: 'iso' });
-    const { images } = isoImages;
-    if (images[0]) {
-      const imageId = images.map((it) => it.id);
-      newData.map((server) => {
-        if (imageId.indexOf(server.image) !== -1) {
-          server.iso_server = true;
-        }
-        server.tags = (server.origin_data || {}).tags || [];
-        return server;
-      });
+    try {
+      const isoImages = await this.imageClient.list({ disk_format: 'iso' });
+      const { images } = isoImages;
+      if (images[0]) {
+        const imageId = images.map((it) => it.id);
+        newData.map((server) => {
+          if (imageId.indexOf(server.image) !== -1) {
+            server.iso_server = true;
+          }
+          server.tags = (server.origin_data || {}).tags || [];
+          return server;
+        });
+      }
+    } catch (e) {
+      // Glance access denied — skip ISO enrichment, not fatal
     }
     if (isServerGroup) {
       return newData
@@ -194,56 +198,64 @@ export class ServerStore extends Base {
   @action
   async fetchInterface({ id }) {
     this.interface.isLoading = true;
-    const params = { device_id: id };
-    const [resData, networks] = await Promise.all([
-      this.portClient.list(params),
-      this.networkClient.list(),
-    ]);
-    const interfaces = resData.ports;
-    const interfaceAll = [];
-    networks.networks.forEach((network) => {
-      const interfaceItem = [];
-      interfaces.forEach((it) => {
-        if (it.network_id === network.id) {
-          it.network_name = network.name;
-          interfaceItem.push(it);
+    try {
+      const params = { device_id: id };
+      const [resData, networks] = await Promise.all([
+        this.portClient.list(params),
+        this.networkClient.list(),
+      ]);
+      const interfaces = resData.ports;
+      const interfaceAll = [];
+      networks.networks.forEach((network) => {
+        const interfaceItem = [];
+        interfaces.forEach((it) => {
+          if (it.network_id === network.id) {
+            it.network_name = network.name;
+            interfaceItem.push(it);
+          }
+        });
+        if (interfaceItem.length !== 0) {
+          interfaceAll.push(interfaceItem);
         }
       });
-      if (interfaceItem.length !== 0) {
-        interfaceAll.push(interfaceItem);
-      }
-    });
-    this.interface = {
-      data: interfaceAll || [],
-      total: resData.total_count || resData.length || 0,
-      isLoading: false,
-    };
+      this.interface = {
+        data: interfaceAll || [],
+        total: resData.total_count || resData.length || 0,
+        isLoading: false,
+      };
+    } catch (e) {
+      this.interface = { data: [], total: 0, isLoading: false };
+    }
   }
 
   @action
   async fetchSecurityGroup({ id }) {
     this.securityGroups.isLoading = true;
-    const portResult = await this.portClient.list({
-      device_id: id,
-    });
-    const { ports = [] } = portResult;
-    const sgs = [];
-    ports.forEach((it) => sgs.push(...it.security_groups));
-    const sgIds = Array.from(new Set(sgs));
-    let sgItems = [];
     try {
-      const result = await Promise.all(
-        sgIds.map((it) => this.sgClient.show(it))
-      );
-      sgItems = result.map((it) =>
-        this.mapperSecurityGroupRule(it.security_group)
-      );
-    } catch (e) {}
-    this.securityGroups = {
-      data: sgItems || [],
-      interfaces: ports,
-      isLoading: false,
-    };
+      const portResult = await this.portClient.list({
+        device_id: id,
+      });
+      const { ports = [] } = portResult;
+      const sgs = [];
+      ports.forEach((it) => sgs.push(...it.security_groups));
+      const sgIds = Array.from(new Set(sgs));
+      let sgItems = [];
+      try {
+        const result = await Promise.all(
+          sgIds.map((it) => this.sgClient.show(it))
+        );
+        sgItems = result.map((it) =>
+          this.mapperSecurityGroupRule(it.security_group)
+        );
+      } catch (e) {}
+      this.securityGroups = {
+        data: sgItems || [],
+        interfaces: ports,
+        isLoading: false,
+      };
+    } catch (e) {
+      this.securityGroups = { data: [], interfaces: [], isLoading: false };
+    }
   }
 
   @action

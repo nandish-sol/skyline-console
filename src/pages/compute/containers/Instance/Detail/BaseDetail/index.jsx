@@ -369,23 +369,39 @@ export class BaseDetail extends Base {
   }
 
   fetchVolumes = async () => {
-    const params = {
-      serverId: this.id,
-    };
-    if (!this.isMyResource) {
-      params.all_projects = true;
+    try {
+      const params = {
+        serverId: this.id,
+      };
+      if (!this.isMyResource) {
+        params.all_projects = true;
+      }
+      await this.volumeStore.fetchList(params);
+    } catch (e) {
+      const status = (e || {}).response ? e.response.status : (e || {}).status;
+      if (status === 403) {
+        this.volumeStore.list.data = [];
+        this.volumeStore.list.isLoading = false;
+      }
     }
-    await this.volumeStore.fetchList(params);
   };
 
   fetchInterfaces = async () => {
-    const params = {
-      device_id: this.id,
-    };
-    if (!this.isMyResource) {
-      params.all_projects = true;
+    try {
+      const params = {
+        device_id: this.id,
+      };
+      if (!this.isMyResource) {
+        params.all_projects = true;
+      }
+      await this.interfaceStore.fetchList(params);
+    } catch (e) {
+      const status = (e || {}).response ? e.response.status : (e || {}).status;
+      if (status === 403) {
+        this.interfaceStore.list.data = [];
+        this.interfaceStore.list.isLoading = false;
+      }
     }
-    await this.interfaceStore.fetchList(params);
     this.store.isLoading = false;
   };
 

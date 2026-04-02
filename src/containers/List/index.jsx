@@ -33,6 +33,7 @@ import Notify from 'components/Notify';
 import { checkTimeIn } from 'utils/time';
 import checkItemPolicy from 'resources/skyline/policy';
 import NotFound from 'components/Cards/NotFound';
+import PermissionDenied from 'components/PermissionDenied';
 import { getPath, getLinkRender } from 'utils/route-map';
 import styles from './index.less';
 
@@ -57,6 +58,7 @@ export default class BaseList extends React.Component {
       autoRefresh: true,
       newHints: false,
       tableHeight: this.getTableHeight(),
+      permissionDenied: false,
     };
 
     this.dataTimerTransition = null;
@@ -709,7 +711,10 @@ export default class BaseList extends React.Component {
       // eslint-disable-next-line no-console
       console.log('fetch list error', e);
       const { message = '', data, status } = (e || {}).response || e || {};
-      if (status === 401) {
+      if (status === 403) {
+        // RBAC permission denied — show PermissionDenied instead of table
+        this.setState({ permissionDenied: true });
+      } else if (status === 401) {
         const title = t('The session has expired, please log in again.');
         Notify.errorWithDetail(null, title);
       } else if (status === 500) {
@@ -1264,6 +1269,9 @@ export default class BaseList extends React.Component {
     if (this.endpointError) {
       const link = this.getRoutePath('overview');
       return <NotFound title={this.name} link={link} endpointError />;
+    }
+    if (this.state.permissionDenied) {
+      return <PermissionDenied resourceName={this.name} />;
     }
     const table = this.renderTable();
     return (
