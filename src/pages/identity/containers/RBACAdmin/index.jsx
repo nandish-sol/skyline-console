@@ -538,13 +538,55 @@ export class RBACAdmin extends React.Component {
     return serviceData.categories || {};
   };
 
+  // Permission dependency map: when a permission is enabled,
+  // auto-enable its prerequisites (list + view are always required)
+  getPrerequisites = (ruleKey) => {
+    // Extract service prefix (e.g. "nova" from "nova:os_compute_api:servers:create")
+    const svc = ruleKey.split(':')[0];
+    const deps = [];
+
+    // Service-specific list/view prerequisites
+    const PREREQ_MAP = {
+      nova: [
+        'nova:os_compute_api:servers:index',
+        'nova:os_compute_api:servers:show',
+      ],
+      cinder: ['cinder:volume:get_all', 'cinder:volume:get'],
+      neutron: ['neutron:get_network', 'neutron:get_subnet'],
+      glance: ['glance:get_images', 'glance:get_image'],
+      heat: ['heat:stacks:index', 'heat:stacks:show'],
+      octavia: ['octavia:os_load-balancer_api:loadbalancer:get_all'],
+      designate: ['designate:get_zones'],
+      barbican: ['barbican:secrets:get'],
+    };
+
+    const svcDeps = PREREQ_MAP[svc] || [];
+    svcDeps.forEach((dep) => {
+      if (dep !== ruleKey) {
+        deps.push(dep);
+      }
+    });
+
+    return deps;
+  };
+
   handleModalToggle = (ruleKey, checked) => {
-    this.setState((prev) => ({
-      modalPermissions: {
+    this.setState((prev) => {
+      const updated = {
         ...prev.modalPermissions,
         [ruleKey]: checked,
-      },
-    }));
+      };
+
+      // When enabling a permission, auto-enable its prerequisites
+      if (checked) {
+        const prereqs = this.getPrerequisites(ruleKey);
+        prereqs.forEach((dep) => {
+          updated[dep] = true;
+        });
+      }
+
+      return { modalPermissions: updated };
+    });
   };
 
   handleSelectAllCategory = (rules, checked) => {
@@ -554,6 +596,13 @@ export class RBACAdmin extends React.Component {
         const ruleKey = rule.rule || '';
         if (ruleKey) {
           updated[ruleKey] = checked;
+          // Auto-enable prerequisites when enabling
+          if (checked) {
+            const prereqs = this.getPrerequisites(ruleKey);
+            prereqs.forEach((dep) => {
+              updated[dep] = true;
+            });
+          }
         }
       });
       return { modalPermissions: updated };
