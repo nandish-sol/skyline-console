@@ -72,8 +72,9 @@ class RBACPermissionsStore {
     const permKeys = Object.keys(this.permissions);
 
     const blocked = policies.some((policyStr) => {
-      // Find any permission key that ends with this policy string
-      // e.g. policy "os_compute_api:servers:delete" matches key "nova:os_compute_api:servers:delete"
+      // Exact match: key ends with ":{policy}" or key === policy
+      // RBAC keys are "{service}:{policy}" e.g. "nova:os_compute_api:servers:delete"
+      // Skyline action policy is e.g. "os_compute_api:servers:delete"
       const matchKey = permKeys.find(
         (k) => k.endsWith(`:${policyStr}`) || k === policyStr
       );
