@@ -142,7 +142,17 @@ function DropdownActionButton({
       const menuItems = it.actions.map((action, actionIndex) => {
         const isAllowed = getIsAllowedValue(alloweds, action.allowedIndex);
         const key = action.key || `key-more-${index}-${actionIndex}`;
-        if (isAllowed) {
+        // RBAC check for submenu items (same pattern as direct actions)
+        const subActionPolicy = action.action
+          ? action.action.policy ||
+            (action.action.constructor && action.action.constructor.policy)
+          : null;
+        const subRbacBlocked = subActionPolicy
+          ? !globalRBACPermissionsStore.isAllowed(subActionPolicy)
+          : false;
+        if (!isAllowed && !subRbacBlocked) {
+          // Neither allowed nor RBAC-blocked — truly not allowed, skip
+        } else {
           allowedCount += 1;
           allowedFatherCount += 1;
           allowedAll += 1;
@@ -152,7 +162,7 @@ function DropdownActionButton({
           <Menu.Item key={key}>
             <ActionButton
               {...config}
-              isAllowed={isAllowed}
+              isAllowed={isAllowed && !subRbacBlocked}
               buttonType="link"
               item={item}
               onFinishAction={onFinishAction}

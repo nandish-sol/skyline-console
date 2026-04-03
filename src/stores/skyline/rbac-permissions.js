@@ -36,6 +36,8 @@ class RBACPermissionsStore {
     return this.hasCustomRole && this.isLoaded;
   }
 
+  @observable fetchError = false;
+
   @action
   async fetchPermissions() {
     try {
@@ -47,13 +49,14 @@ class RBACPermissionsStore {
         const result = await resp.json();
         this.permissions = result.permissions || {};
         this.hasCustomRole = result.has_custom_role || false;
+        this.fetchError = false;
       }
       this.isLoaded = true;
     } catch (e) {
-      // Non-fatal — if RBAC service is unavailable, allow everything
-      this.permissions = {};
-      this.hasCustomRole = false;
+      // On error: keep last known permissions, retry after 10s
+      this.fetchError = true;
       this.isLoaded = true;
+      setTimeout(() => this.fetchPermissions(), 10000);
     }
   }
 
@@ -89,6 +92,11 @@ class RBACPermissionsStore {
     this.permissions = {};
     this.hasCustomRole = false;
     this.isLoaded = false;
+  }
+
+  // Called by rootStore.clearData() on logout/project switch
+  clearData() {
+    this.reset();
   }
 }
 
