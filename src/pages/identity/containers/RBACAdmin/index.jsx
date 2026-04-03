@@ -190,6 +190,8 @@ export class RBACAdmin extends React.Component {
       assignments: [],
       projects: [],
       savedPermissions: {},
+      assignmentsLoaded: false,
+      assignmentsLoading: false,
 
       // Main tabs
       activeMainTab: 'custom',
@@ -220,57 +222,30 @@ export class RBACAdmin extends React.Component {
   fetchAll = async () => {
     this.setState({ loading: true, error: null });
     try {
+      // Fetch only what's needed for initial load (roles tab):
+      // matrix + roles + permissions. Users/assignments/projects loaded lazily.
       const results = await Promise.allSettled([
         apiFetch('/api/v1/rbac/matrix'),
         apiFetch('/api/v1/rbac/roles'),
-        apiFetch('/api/v1/rbac/users'),
-        apiFetch('/api/v1/rbac/assignments'),
         apiFetch('/api/v1/rbac/permissions').catch(() => ({ roles: [] })),
       ]);
 
       const matrixResult = results[0];
       const rolesResult = results[1];
-      const usersResult = results[2];
-      const assignmentsResult = results[3];
-      const permResult = results[4];
+      const permResult = results[2];
 
       if (matrixResult.status === 'rejected') {
-        this.setState({
-          error: 'service_unavailable',
-          loading: false,
-        });
+        this.setState({ error: 'service_unavailable', loading: false });
         return;
       }
 
       const matrixData = matrixResult.value;
       const rolesData =
         rolesResult.status === 'fulfilled' ? rolesResult.value : null;
-      const usersData =
-        usersResult.status === 'fulfilled' ? usersResult.value : null;
-      const assignmentsData =
-        assignmentsResult.status === 'fulfilled'
-          ? assignmentsResult.value
-          : null;
       const permData =
         permResult.status === 'fulfilled' ? permResult.value : { roles: [] };
 
       const roles = rolesData ? rolesData.roles || [] : [];
-      const users = usersData ? usersData.users || [] : [];
-      const assignments = assignmentsData
-        ? assignmentsData.assignments || []
-        : [];
-
-      const projectMap = {};
-      const projects = [];
-      assignments.forEach((a) => {
-        if (a.project_id && !projectMap[a.project_id]) {
-          projectMap[a.project_id] = true;
-          projects.push({
-            id: a.project_id,
-            name: a.project_name || a.project_id,
-          });
-        }
-      });
 
       const savedPermissions = {};
       (permData.roles || []).forEach((rp) => {
@@ -284,15 +259,46 @@ export class RBACAdmin extends React.Component {
       this.setState({
         matrixData,
         roles,
-        users,
-        assignments,
-        projects,
         savedPermissions,
         loading: false,
         error: null,
       });
     } catch (err) {
       this.setState({ error: 'service_unavailable', loading: false });
+    }
+  };
+
+  fetchAssignmentsData = async () => {
+    if (this.state.assignmentsLoaded) return;
+    this.setState({ assignmentsLoading: true });
+    try {
+      const [usersData, assignmentsData, projectsData] =
+        await Promise.allSettled([
+          apiFetch('/api/v1/rbac/users'),
+          apiFetch('/api/v1/rbac/assignments'),
+          apiFetch('/api/v1/rbac/projects'),
+        ]);
+
+      const users =
+        usersData.status === 'fulfilled' ? usersData.value.users || [] : [];
+      const assignments =
+        assignmentsData.status === 'fulfilled'
+          ? assignmentsData.value.assignments || []
+          : [];
+      const projects =
+        projectsData.status === 'fulfilled'
+          ? projectsData.value.projects || []
+          : [];
+
+      this.setState({
+        users,
+        assignments,
+        projects,
+        assignmentsLoaded: true,
+        assignmentsLoading: false,
+      });
+    } catch (err) {
+      this.setState({ assignmentsLoading: false });
     }
   };
 
@@ -647,8 +653,9 @@ export class RBACAdmin extends React.Component {
         assignRoleId: undefined,
         assignProjectId: undefined,
         assignRoleLoading: false,
+        assignmentsLoaded: false,
       });
-      this.fetchAll();
+      this.fetchAssignmentsData();
     } catch (err) {
       message.error(`Failed to assign role: ${err.message}`);
       this.setState({ assignRoleLoading: false });
@@ -666,7 +673,8 @@ export class RBACAdmin extends React.Component {
         }),
       });
       message.success('Assignment revoked');
-      this.fetchAll();
+      this.setState({ assignmentsLoaded: false });
+      this.fetchAssignmentsData();
     } catch (err) {
       message.error(`Failed to revoke assignment: ${err.message}`);
     }
@@ -813,7 +821,8 @@ export class RBACAdmin extends React.Component {
   // --- Render: Assignments tab ---
 
   renderAssignmentsTab() {
-    const { loading } = this.state;
+    const { assignmentsLoading, assignmentsLoaded } = this.state;
+    const loading = assignmentsLoading || !assignmentsLoaded;
     const filteredAssignments = this.getFilteredAssignments();
 
     return (
@@ -1154,7 +1163,12 @@ export class RBACAdmin extends React.Component {
       >
         <Tabs
           activeKey={activeMainTab}
-          onChange={(key) => this.setState({ activeMainTab: key })}
+          onChange={(key) => {
+            this.setState({ activeMainTab: key });
+            if (key === 'assignments') {
+              this.fetchAssignmentsData();
+            }
+          }}
         >
           <TabPane tab="Custom Roles" key="custom">
             {this.renderCustomRolesTab()}
