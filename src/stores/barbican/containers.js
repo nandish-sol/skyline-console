@@ -45,7 +45,17 @@ export class ContainersStore extends Base {
     return (data) => {
       const { container_ref, algorithm } = data;
       const [, uuid] = container_ref.split('/containers/');
-      const { domain, expiration } = algorithm ? JSON.parse(algorithm) : {};
+      let domain;
+      let expiration;
+      if (algorithm) {
+        try {
+          const parsed = JSON.parse(algorithm);
+          domain = parsed.domain;
+          expiration = parsed.expiration;
+        } catch (e) {
+          // algorithm is a plain string (e.g., "aes"), not JSON
+        }
+      }
       return {
         ...data,
         id: uuid,
