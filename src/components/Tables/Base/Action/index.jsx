@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import checkItemPolicy, { systemRoleIsReader } from 'resources/skyline/policy';
-import globalRBACPermissionsStore from 'stores/skyline/rbac-permissions';
 
 export async function checkAllowed({
   item,
@@ -37,10 +36,6 @@ export async function checkAllowed({
     enableSystemReader,
   });
   if (!policyResult) {
-    return false;
-  }
-  // Check custom RBAC permissions (Xloud RBAC layer)
-  if (policy && !globalRBACPermissionsStore.isAllowed(policy)) {
     return false;
   }
   let result = false;

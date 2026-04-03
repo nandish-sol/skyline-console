@@ -22,6 +22,7 @@ import Notify from 'components/Notify';
 import classnames from 'classnames';
 import { firstUpperCase, allSettled } from 'utils';
 import globalLicenseStore from 'stores/skyline/license';
+import globalRBACPermissionsStore from 'stores/skyline/rbac-permissions';
 import styles from './index.less';
 
 export const getDefaultMsg = (action, data) => {
@@ -571,16 +572,27 @@ export class ActionButton extends Component {
     const licenseBlocked =
       globalLicenseStore.restrictedMode &&
       !globalLicenseStore.isActionAllowed(id || title || '');
-    const effectiveDisabled = !isAllowed || licenseBlocked;
 
-    // Only hide if not allowed AND not license-blocked (license = disable, not hide)
-    if (!isAllowed && needHide && !licenseBlocked) {
+    // RBAC restriction: disable (not hide) when custom role blocks this action
+    const actionPolicy = this.props.action
+      ? this.props.action.policy || this.props.action.constructor?.policy
+      : null;
+    const rbacBlocked = actionPolicy
+      ? !globalRBACPermissionsStore.isAllowed(actionPolicy)
+      : false;
+
+    const effectiveDisabled = !isAllowed || licenseBlocked || rbacBlocked;
+
+    // Only hide if not allowed AND not blocked by license/RBAC
+    if (!isAllowed && needHide && !licenseBlocked && !rbacBlocked) {
       return null;
     }
 
     const buttonText = name || title;
     let tipText = null;
-    if (licenseBlocked) {
+    if (rbacBlocked) {
+      tipText = t('You do not have permission for this action.');
+    } else if (licenseBlocked) {
       tipText = t('License expired. This action is disabled.');
     } else if (isFirstAction && buttonText && buttonText.length > maxLength) {
       tipText = buttonText;
