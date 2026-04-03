@@ -46,14 +46,53 @@ const ACTION_COLOR_MAP = {
   delete: 'red',
   update: 'blue',
   action: 'orange',
+  start: 'cyan',
+  stop: 'volcano',
+  attach: 'geekblue',
+  detach: 'purple',
+  reboot: 'magenta',
+  suspend: 'gold',
   unknown: 'default',
 };
 
+const HTTP_STATUS_TEXT = {
+  200: 'OK',
+  201: 'Created',
+  202: 'Accepted',
+  204: 'No Content',
+  301: 'Moved',
+  302: 'Found',
+  304: 'Not Modified',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Not Allowed',
+  409: 'Conflict',
+  413: 'Too Large',
+  500: 'Server Error',
+  502: 'Bad Gateway',
+  503: 'Unavailable',
+};
+
 const STATUS_COLOR = (status) => {
-  if (status >= 200 && status < 300) return 'green';
-  if (status >= 400 && status < 500) return 'orange';
-  if (status >= 500) return 'red';
+  const code = parseInt(status, 10);
+  if (code >= 200 && code < 300) return 'green';
+  if (code >= 400 && code < 500) return 'orange';
+  if (code >= 500) return 'red';
   return 'default';
+};
+
+const SERVICE_LABELS = {
+  nova: 'Nova',
+  cinder: 'Cinder',
+  neutron: 'Neutron',
+  keystone: 'Keystone',
+  glance: 'Glance',
+  heat: 'Heat',
+  octavia: 'Octavia',
+  watcher: 'Watcher',
+  horizon: 'Horizon',
 };
 
 @inject('rootStore')
@@ -78,7 +117,6 @@ class ActivityLog extends Component {
         current: 1,
         pageSize: 20,
       },
-      // Dynamic filter options from API
       serviceOptions: [],
       resourceTypeOptions: [],
       actionTypeOptions: [],
@@ -101,7 +139,7 @@ class ActivityLog extends Component {
         actionTypeOptions: (result && result.action_types) || [],
       });
     } catch (e) {
-      // Silently fail — filters just won't have options
+      // Silently fail
     }
   };
 
@@ -192,7 +230,7 @@ class ActivityLog extends Component {
           start: undefined,
           end: undefined,
         },
-        pagination: { current: 1, pageSize: 50 },
+        pagination: { current: 1, pageSize: 20 },
       },
       this.fetchData
     );
@@ -203,19 +241,27 @@ class ActivityLog extends Component {
       title: 'Time',
       dataIndex: 'timestamp',
       key: 'timestamp',
-      width: 180,
+      width: 170,
       render: (val) => {
         if (!val) return '-';
         const d = new Date(val);
-        return d.toLocaleString();
+        return d.toLocaleString('en-IN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
       },
     },
     {
       title: 'Service',
       dataIndex: 'service',
       key: 'service',
-      width: 100,
-      render: (val) => <Tag>{val || '-'}</Tag>,
+      width: 90,
+      render: (val) => <Tag>{SERVICE_LABELS[val] || val || '-'}</Tag>,
     },
     {
       title: 'Action',
@@ -230,14 +276,14 @@ class ActivityLog extends Component {
       title: 'Resource',
       dataIndex: 'resource_type',
       key: 'resource_type',
-      width: 100,
+      width: 90,
       render: (val) => val || '-',
     },
     {
       title: 'Name',
       dataIndex: 'resource_name',
       key: 'resource_name',
-      width: 140,
+      width: 160,
       ellipsis: true,
       render: (val) => val || '-',
     },
@@ -246,38 +292,55 @@ class ActivityLog extends Component {
       dataIndex: 'http_url',
       key: 'http_url',
       ellipsis: true,
-      render: (val, record) => (
-        <Tooltip title={val}>
-          <span>
-            <Tag
-              color={record.http_method === 'DELETE' ? 'red' : 'blue'}
-              style={{ marginRight: 4 }}
-            >
-              {record.http_method}
-            </Tag>
-            {val ? val.substring(0, 60) : '-'}
-          </span>
-        </Tooltip>
-      ),
+      render: (val, record) => {
+        if (!val && !record.http_method) return '-';
+        const methodColorMap = {
+          DELETE: 'red',
+          POST: 'blue',
+          PUT: 'orange',
+          PATCH: 'orange',
+        };
+        const methodColor = methodColorMap[record.http_method] || 'default';
+        return (
+          <Tooltip title={val}>
+            <span>
+              {record.http_method && (
+                <Tag color={methodColor} style={{ marginRight: 4 }}>
+                  {record.http_method}
+                </Tag>
+              )}
+              {val ? val.substring(0, 55) : '-'}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Status',
       dataIndex: 'http_status',
       key: 'http_status',
-      width: 80,
-      render: (val) => <Tag color={STATUS_COLOR(val)}>{val || '-'}</Tag>,
+      width: 100,
+      render: (val) => {
+        const code = parseInt(val, 10);
+        if (!code) return '-';
+        const text = HTTP_STATUS_TEXT[code] || code;
+        return <Tag color={STATUS_COLOR(code)}>{text}</Tag>;
+      },
     },
     {
       title: 'User',
       dataIndex: 'user_name',
       key: 'user_name',
-      width: 120,
+      width: 110,
       render: (val, record) => {
         if (val) return val;
         const uid = record.user_id || '';
-        return uid && uid !== 'system'
-          ? `${uid.substring(0, 8)}...`
-          : uid || '-';
+        if (!uid || uid === 'system') return uid || '-';
+        return (
+          <Tooltip title={uid}>
+            <span style={{ color: '#999' }}>{uid.substring(0, 8)}...</span>
+          </Tooltip>
+        );
       },
     },
     {
@@ -285,35 +348,49 @@ class ActivityLog extends Component {
       dataIndex: 'project_name',
       key: 'project_name',
       width: 120,
-      render: (val) => val || '-',
+      render: (val, record) => {
+        if (val) return val;
+        const pid = record.project_id || '';
+        if (!pid) return '-';
+        return (
+          <Tooltip title={pid}>
+            <span style={{ color: '#999' }}>{pid.substring(0, 8)}...</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Node',
       dataIndex: 'node',
       key: 'node',
-      width: 80,
+      width: 60,
     },
     {
       title: 'Time (s)',
       dataIndex: 'response_time',
       key: 'response_time',
-      width: 80,
+      width: 70,
       render: (val) => {
         if (!val) return '-';
         const num = parseFloat(val);
-        // Apache logs use microseconds (>1000), Python logs use seconds (<100)
         const secs = num > 100 ? num / 1000000 : num;
-        return `${secs.toFixed(3)}`;
+        return secs.toFixed(3);
       },
     },
   ];
 
   renderSummaryCards = () => {
     const { aggregations, total } = this.state;
-    const statusAgg = (aggregations.by_status || []).reduce((acc, b) => {
-      acc[b.key] = b.count;
-      return acc;
-    }, {});
+    const statusBuckets = aggregations.by_status || [];
+    let success = 0;
+    let clientError = 0;
+    let serverError = 0;
+    statusBuckets.forEach((b) => {
+      const code = parseInt(b.key, 10);
+      if (code >= 200 && code < 300) success += b.count;
+      else if (code >= 400 && code < 500) clientError += b.count;
+      else if (code >= 500) serverError += b.count;
+    });
 
     return (
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -326,7 +403,7 @@ class ActivityLog extends Component {
           <Card size="small">
             <Statistic
               title="Success (2xx)"
-              value={statusAgg.success || 0}
+              value={success}
               valueStyle={{ color: '#3f8600' }}
               prefix={<CheckCircleOutlined />}
             />
@@ -336,7 +413,7 @@ class ActivityLog extends Component {
           <Card size="small">
             <Statistic
               title="Client Error (4xx)"
-              value={statusAgg.client_error || 0}
+              value={clientError}
               valueStyle={{ color: '#faad14' }}
               prefix={<WarningOutlined />}
             />
@@ -346,7 +423,7 @@ class ActivityLog extends Component {
           <Card size="small">
             <Statistic
               title="Server Error (5xx)"
-              value={statusAgg.server_error || 0}
+              value={serverError}
               valueStyle={{ color: '#cf1322' }}
               prefix={<CloseCircleOutlined />}
             />
@@ -373,7 +450,7 @@ class ActivityLog extends Component {
             >
               {serviceOptions.map((s) => (
                 <Option key={s} value={s}>
-                  {s}
+                  {SERVICE_LABELS[s] || s}
                 </Option>
               ))}
             </Select>
@@ -468,11 +545,11 @@ class ActivityLog extends Component {
               total,
               showSizeChanger: true,
               pageSizeOptions: ['20', '50', '100', '200'],
-              showTotal: (t) => `Total ${t} events`,
+              showTotal: (tot) => `Total ${tot} events`,
             }}
             onChange={this.handleTableChange}
             size="small"
-            scroll={{ x: 1200, y: 'calc(100vh - 420px)' }}
+            scroll={{ x: 1400, y: 'calc(100vh - 420px)' }}
           />
         </Spin>
       </div>
