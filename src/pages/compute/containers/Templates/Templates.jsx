@@ -14,7 +14,7 @@
 
 import { observer, inject } from 'mobx-react';
 import Base from 'containers/List';
-import { imageStatus, imageVisibility } from 'resources/glance/image';
+import { imageStatus } from 'resources/glance/image';
 import { TemplateStore } from 'stores/glance/templates';
 import { getOptions } from 'utils/index';
 import actionConfigs from './actions';
@@ -54,18 +54,6 @@ export class Templates extends Base {
     return 'created_at';
   }
 
-  get hasTab() {
-    return !this.isAdminPage;
-  }
-
-  get tab() {
-    if (this.isAdminPage) {
-      return null;
-    }
-    const { tab = 'project' } = this.props;
-    return tab;
-  }
-
   get adminPageHasProjectFilter() {
     return true;
   }
@@ -76,35 +64,12 @@ export class Templates extends Base {
 
   updateFetchParams = (params) => {
     if (this.isAdminPage) {
-      return {
-        ...params,
-        all_projects: true,
-      };
+      return params;
     }
-    switch (this.tab) {
-      case 'public':
-        return {
-          ...params,
-          visibility: 'public',
-        };
-      case 'shared':
-        return {
-          ...params,
-          visibility: 'shared',
-        };
-      case 'project':
-        return {
-          ...params,
-          owner: this.currentProjectId,
-        };
-      case 'all':
-        return {
-          ...params,
-          all_projects: true,
-        };
-      default:
-        break;
-    }
+    return {
+      ...params,
+      owner: this.currentProjectId,
+    };
   };
 
   getColumns() {
@@ -117,7 +82,7 @@ export class Templates extends Base {
       {
         title: t('Project ID/Name'),
         dataIndex: 'project_name',
-        hidden: !this.isAdminPage && this.tab !== 'all',
+        hidden: !this.isAdminPage,
         sorter: false,
       },
       {
@@ -175,12 +140,6 @@ export class Templates extends Base {
         valueMap: imageStatus,
       },
       {
-        title: t('Visibility'),
-        dataIndex: 'visibility',
-        valueMap: imageVisibility,
-        sorter: false,
-      },
-      {
         title: t('Size'),
         dataIndex: 'size',
         isHideable: true,
@@ -196,7 +155,7 @@ export class Templates extends Base {
   }
 
   get searchFilters() {
-    const filters = [
+    return [
       {
         label: t('Name'),
         name: 'name',
@@ -207,15 +166,6 @@ export class Templates extends Base {
         options: getOptions(imageStatus),
       },
     ];
-    const values = ['public', 'shared'];
-    if (values.indexOf(this.tab) < 0) {
-      filters.push({
-        label: t('Visibility'),
-        name: 'visibility',
-        options: getOptions(imageVisibility),
-      });
-    }
-    return filters;
   }
 }
 

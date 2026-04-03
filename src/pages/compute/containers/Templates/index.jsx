@@ -12,38 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { observer, inject } from 'mobx-react';
-import Base from 'containers/TabList';
-import Templates from './Templates';
-
-export class TabTemplates extends Base {
-  get tabs() {
-    const tabs = [
-      {
-        title: t('Current Project Templates'),
-        key: 'project',
-        component: Templates,
-      },
-      {
-        title: t('Public Templates'),
-        key: 'public',
-        component: Templates,
-      },
-      {
-        title: t('Shared Templates'),
-        key: 'shared',
-        component: Templates,
-      },
-    ];
-    if (this.hasAdminRole) {
-      tabs.push({
-        title: t('All Templates'),
-        key: 'all',
-        component: Templates,
-      });
-    }
-    return tabs;
-  }
-}
-
-export default inject('rootStore')(observer(TabTemplates));
+export { default } from './Templates';

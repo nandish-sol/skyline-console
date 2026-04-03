@@ -37,8 +37,7 @@ import HostAggregate from '../containers/HostAggregate';
 import BareMetalNode from '../containers/BareMetalNode';
 import BareMetalNodeDetail from '../containers/BareMetalNode/Detail';
 import CreateNode from '../containers/BareMetalNode/actions/Create';
-import TabTemplates from '../containers/Templates';
-import TemplatesAdmin from '../containers/Templates/Templates';
+import Templates from '../containers/Templates';
 import TemplateDetail from '../containers/Templates/Detail';
 
 const PATH = '/compute';
@@ -178,10 +177,10 @@ export default [
         component: CreateNode,
         exact: true,
       },
-      { path: `${PATH}/template`, component: TabTemplates, exact: true },
+      { path: `${PATH}/template`, component: Templates, exact: true },
       {
         path: `${PATH}/template-admin`,
-        component: TemplatesAdmin,
+        component: Templates,
         exact: true,
       },
       {
