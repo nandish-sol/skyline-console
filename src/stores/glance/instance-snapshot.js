@@ -70,7 +70,9 @@ export class InstanceSnapshotStore extends Base {
     if (items.length === 0) {
       return items;
     }
-    const newItems = items.filter(isSnapshot);
+    const newItems = items.filter(
+      (it) => isSnapshot(it) && it.xloud_template !== 'true'
+    );
     const { id } = filters;
     if (!id) {
       return newItems;

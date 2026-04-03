@@ -137,6 +137,21 @@ const renderMenu = (t) => {
           ],
         },
         {
+          path: '/compute/template-admin',
+          name: t('VM Templates'),
+          key: 'computeTemplateAdmin',
+          level: 1,
+          children: [
+            {
+              path: /^\/compute\/template-admin\/detail\/[^/]+$/,
+              name: t('Template Detail'),
+              key: 'computeTemplateDetailAdmin',
+              level: 2,
+              routePath: '/compute/template-admin/detail/:id',
+            },
+          ],
+        },
+        {
           path: '/compute/hypervisors-admin',
           name: t('Hypervisors'),
           key: 'hypervisorAdmin',
