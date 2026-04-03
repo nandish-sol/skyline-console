@@ -157,16 +157,15 @@ export class Edit extends ModalAction {
     };
     const changeValues = [];
     Object.keys(newValues).forEach((key) => {
-      if (
-        has(this.item.originData, key) &&
-        get(this.item.originData, key) !== newValues[key]
-      ) {
+      const orig = get(this.item.originData, key);
+      const isNew = newValues[key];
+      if (orig != null && orig !== newValues[key] && isNew) {
         changeValues.push({
           op: 'replace',
           path: `/${key}`,
           value: newValues[key],
         });
-      } else if (!has(this.item.originData, key) && newValues[key]) {
+      } else if ((orig == null || !has(this.item.originData, key)) && isNew) {
         changeValues.push({
           op: 'add',
           path: `/${key}`,
