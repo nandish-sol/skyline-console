@@ -633,20 +633,34 @@ export class RBACAdmin extends React.Component {
   };
 
   handleSavePermissions = async () => {
-    const { editingRole, modalPermissions } = this.state;
+    const { editingRole, modalPermissions, matrixData } = this.state;
     if (!editingRole) return;
     this.setState({ modalSaving: true });
     try {
-      const permList = Object.entries(modalPermissions).map(
-        ([key, allowed]) => {
-          const idx = key.indexOf(':');
-          return {
-            service: key.substring(0, idx),
-            action: key.substring(idx + 1),
-            allowed,
-          };
-        }
-      );
+      // Build complete permission list from ALL services in matrix,
+      // using modalPermissions for toggled items, matrix default for others
+      const permList = [];
+      if (matrixData && matrixData.services) {
+        matrixData.services.forEach((svc) => {
+          const categories = svc.categories || {};
+          Object.values(categories).forEach((rules) => {
+            (rules || []).forEach((rule) => {
+              const ruleKey = rule.rule || '';
+              if (!ruleKey) return;
+              const idx = ruleKey.indexOf(':');
+              const allowed =
+                ruleKey in modalPermissions
+                  ? modalPermissions[ruleKey]
+                  : this.getRolePermissionFromMatrix(editingRole, ruleKey);
+              permList.push({
+                service: ruleKey.substring(0, idx),
+                action: ruleKey.substring(idx + 1),
+                allowed: !!allowed,
+              });
+            });
+          });
+        });
+      }
       await apiFetch('/api/v1/rbac/permissions', {
         method: 'PUT',
         body: JSON.stringify({
