@@ -21,6 +21,7 @@ import {
   Button,
   Modal,
   Form,
+  Input,
   Select,
   Spin,
   Popconfirm,
@@ -190,6 +191,8 @@ export class RBACAdmin extends React.Component {
       assignments: [],
       projects: [],
       savedPermissions: {},
+      assignmentsLoaded: false,
+      assignmentsLoading: false,
 
       // Main tabs
       activeMainTab: 'custom',
@@ -203,6 +206,11 @@ export class RBACAdmin extends React.Component {
       modalPermissions: {},
       modalActiveTab: 'nova',
       modalSaving: false,
+
+      // Create role modal
+      createRoleVisible: false,
+      createRoleName: '',
+      createRoleLoading: false,
 
       // Assign role modal
       assignModalVisible: false,
@@ -220,57 +228,30 @@ export class RBACAdmin extends React.Component {
   fetchAll = async () => {
     this.setState({ loading: true, error: null });
     try {
+      // Fetch only what's needed for initial load (roles tab):
+      // matrix + roles + permissions. Users/assignments/projects loaded lazily.
       const results = await Promise.allSettled([
         apiFetch('/api/v1/rbac/matrix'),
         apiFetch('/api/v1/rbac/roles'),
-        apiFetch('/api/v1/rbac/users'),
-        apiFetch('/api/v1/rbac/assignments'),
         apiFetch('/api/v1/rbac/permissions').catch(() => ({ roles: [] })),
       ]);
 
       const matrixResult = results[0];
       const rolesResult = results[1];
-      const usersResult = results[2];
-      const assignmentsResult = results[3];
-      const permResult = results[4];
+      const permResult = results[2];
 
       if (matrixResult.status === 'rejected') {
-        this.setState({
-          error: 'service_unavailable',
-          loading: false,
-        });
+        this.setState({ error: 'service_unavailable', loading: false });
         return;
       }
 
       const matrixData = matrixResult.value;
       const rolesData =
         rolesResult.status === 'fulfilled' ? rolesResult.value : null;
-      const usersData =
-        usersResult.status === 'fulfilled' ? usersResult.value : null;
-      const assignmentsData =
-        assignmentsResult.status === 'fulfilled'
-          ? assignmentsResult.value
-          : null;
       const permData =
         permResult.status === 'fulfilled' ? permResult.value : { roles: [] };
 
       const roles = rolesData ? rolesData.roles || [] : [];
-      const users = usersData ? usersData.users || [] : [];
-      const assignments = assignmentsData
-        ? assignmentsData.assignments || []
-        : [];
-
-      const projectMap = {};
-      const projects = [];
-      assignments.forEach((a) => {
-        if (a.project_id && !projectMap[a.project_id]) {
-          projectMap[a.project_id] = true;
-          projects.push({
-            id: a.project_id,
-            name: a.project_name || a.project_id,
-          });
-        }
-      });
 
       const savedPermissions = {};
       (permData.roles || []).forEach((rp) => {
@@ -284,15 +265,46 @@ export class RBACAdmin extends React.Component {
       this.setState({
         matrixData,
         roles,
-        users,
-        assignments,
-        projects,
         savedPermissions,
         loading: false,
         error: null,
       });
     } catch (err) {
       this.setState({ error: 'service_unavailable', loading: false });
+    }
+  };
+
+  fetchAssignmentsData = async () => {
+    if (this.state.assignmentsLoaded) return;
+    this.setState({ assignmentsLoading: true });
+    try {
+      const [usersData, assignmentsData, projectsData] =
+        await Promise.allSettled([
+          apiFetch('/api/v1/rbac/users'),
+          apiFetch('/api/v1/rbac/assignments'),
+          apiFetch('/api/v1/rbac/projects'),
+        ]);
+
+      const users =
+        usersData.status === 'fulfilled' ? usersData.value.users || [] : [];
+      const assignments =
+        assignmentsData.status === 'fulfilled'
+          ? assignmentsData.value.assignments || []
+          : [];
+      const projects =
+        projectsData.status === 'fulfilled'
+          ? projectsData.value.projects || []
+          : [];
+
+      this.setState({
+        users,
+        assignments,
+        projects,
+        assignmentsLoaded: true,
+        assignmentsLoading: false,
+      });
+    } catch (err) {
+      this.setState({ assignmentsLoading: false });
     }
   };
 
@@ -436,6 +448,34 @@ export class RBACAdmin extends React.Component {
     },
   ];
 
+  handleCreateRole = async () => {
+    const { createRoleName } = this.state;
+    if (!createRoleName || !createRoleName.trim()) {
+      message.warning('Please enter a role name');
+      return;
+    }
+    this.setState({ createRoleLoading: true });
+    try {
+      await apiFetch('/api/v1/rbac/roles', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: createRoleName.trim(),
+          description: '',
+        }),
+      });
+      message.success(`Role "${createRoleName.trim()}" created`);
+      this.setState({
+        createRoleVisible: false,
+        createRoleName: '',
+        createRoleLoading: false,
+      });
+      this.fetchAll();
+    } catch (err) {
+      message.error(`Failed to create role: ${err.message}`);
+      this.setState({ createRoleLoading: false });
+    }
+  };
+
   handleManagePermissions = (record) => {
     const { savedPermissions } = this.state;
     const perms = savedPermissions[record.name]
@@ -498,13 +538,55 @@ export class RBACAdmin extends React.Component {
     return serviceData.categories || {};
   };
 
+  // Permission dependency map: when a permission is enabled,
+  // auto-enable its prerequisites (list + view are always required)
+  getPrerequisites = (ruleKey) => {
+    // Extract service prefix (e.g. "nova" from "nova:os_compute_api:servers:create")
+    const svc = ruleKey.split(':')[0];
+    const deps = [];
+
+    // Service-specific list/view prerequisites
+    const PREREQ_MAP = {
+      nova: [
+        'nova:os_compute_api:servers:index',
+        'nova:os_compute_api:servers:show',
+      ],
+      cinder: ['cinder:volume:get_all', 'cinder:volume:get'],
+      neutron: ['neutron:get_network', 'neutron:get_subnet'],
+      glance: ['glance:get_images', 'glance:get_image'],
+      heat: ['heat:stacks:index', 'heat:stacks:show'],
+      octavia: ['octavia:os_load-balancer_api:loadbalancer:get_all'],
+      designate: ['designate:get_zones'],
+      barbican: ['barbican:secrets:get'],
+    };
+
+    const svcDeps = PREREQ_MAP[svc] || [];
+    svcDeps.forEach((dep) => {
+      if (dep !== ruleKey) {
+        deps.push(dep);
+      }
+    });
+
+    return deps;
+  };
+
   handleModalToggle = (ruleKey, checked) => {
-    this.setState((prev) => ({
-      modalPermissions: {
+    this.setState((prev) => {
+      const updated = {
         ...prev.modalPermissions,
         [ruleKey]: checked,
-      },
-    }));
+      };
+
+      // When enabling a permission, auto-enable its prerequisites
+      if (checked) {
+        const prereqs = this.getPrerequisites(ruleKey);
+        prereqs.forEach((dep) => {
+          updated[dep] = true;
+        });
+      }
+
+      return { modalPermissions: updated };
+    });
   };
 
   handleSelectAllCategory = (rules, checked) => {
@@ -514,6 +596,13 @@ export class RBACAdmin extends React.Component {
         const ruleKey = rule.rule || '';
         if (ruleKey) {
           updated[ruleKey] = checked;
+          // Auto-enable prerequisites when enabling
+          if (checked) {
+            const prereqs = this.getPrerequisites(ruleKey);
+            prereqs.forEach((dep) => {
+              updated[dep] = true;
+            });
+          }
         }
       });
       return { modalPermissions: updated };
@@ -544,20 +633,34 @@ export class RBACAdmin extends React.Component {
   };
 
   handleSavePermissions = async () => {
-    const { editingRole, modalPermissions } = this.state;
+    const { editingRole, modalPermissions, matrixData } = this.state;
     if (!editingRole) return;
     this.setState({ modalSaving: true });
     try {
-      const permList = Object.entries(modalPermissions).map(
-        ([key, allowed]) => {
-          const idx = key.indexOf(':');
-          return {
-            service: key.substring(0, idx),
-            action: key.substring(idx + 1),
-            allowed,
-          };
-        }
-      );
+      // Build complete permission list from ALL services in matrix,
+      // using modalPermissions for toggled items, matrix default for others
+      const permList = [];
+      if (matrixData && matrixData.services) {
+        matrixData.services.forEach((svc) => {
+          const categories = svc.categories || {};
+          Object.values(categories).forEach((rules) => {
+            (rules || []).forEach((rule) => {
+              const ruleKey = rule.rule || '';
+              if (!ruleKey) return;
+              const idx = ruleKey.indexOf(':');
+              const allowed =
+                ruleKey in modalPermissions
+                  ? modalPermissions[ruleKey]
+                  : this.getRolePermissionFromMatrix(editingRole, ruleKey);
+              permList.push({
+                service: ruleKey.substring(0, idx),
+                action: ruleKey.substring(idx + 1),
+                allowed: !!allowed,
+              });
+            });
+          });
+        });
+      }
       await apiFetch('/api/v1/rbac/permissions', {
         method: 'PUT',
         body: JSON.stringify({
@@ -647,8 +750,9 @@ export class RBACAdmin extends React.Component {
         assignRoleId: undefined,
         assignProjectId: undefined,
         assignRoleLoading: false,
+        assignmentsLoaded: false,
       });
-      this.fetchAll();
+      this.fetchAssignmentsData();
     } catch (err) {
       message.error(`Failed to assign role: ${err.message}`);
       this.setState({ assignRoleLoading: false });
@@ -666,7 +770,8 @@ export class RBACAdmin extends React.Component {
         }),
       });
       message.success('Assignment revoked');
-      this.fetchAll();
+      this.setState({ assignmentsLoaded: false });
+      this.fetchAssignmentsData();
     } catch (err) {
       message.error(`Failed to revoke assignment: ${err.message}`);
     }
@@ -754,6 +859,13 @@ export class RBACAdmin extends React.Component {
             marginBottom: 16,
           }}
         >
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => this.setState({ createRoleVisible: true })}
+          >
+            Create Role
+          </Button>
           {hasCustomSelected && (
             <Popconfirm
               title="Delete selected custom roles? This cannot be undone."
@@ -813,7 +925,8 @@ export class RBACAdmin extends React.Component {
   // --- Render: Assignments tab ---
 
   renderAssignmentsTab() {
-    const { loading } = this.state;
+    const { assignmentsLoading, assignmentsLoaded } = this.state;
+    const loading = assignmentsLoading || !assignmentsLoaded;
     const filteredAssignments = this.getFilteredAssignments();
 
     return (
@@ -1022,6 +1135,39 @@ export class RBACAdmin extends React.Component {
     );
   }
 
+  // --- Render: Create Role modal ---
+
+  renderCreateRoleModal() {
+    const { createRoleVisible, createRoleName, createRoleLoading } = this.state;
+    return (
+      <Modal
+        title="Create Custom Role"
+        visible={createRoleVisible}
+        onOk={this.handleCreateRole}
+        onCancel={() =>
+          this.setState({
+            createRoleVisible: false,
+            createRoleName: '',
+          })
+        }
+        confirmLoading={createRoleLoading}
+        okText="Create"
+      >
+        <Form layout="vertical">
+          <Form.Item label="Role Name" required>
+            <Input
+              value={createRoleName}
+              onChange={(e) =>
+                this.setState({ createRoleName: e.target.value })
+              }
+              placeholder="e.g. storage-admin, network-viewer"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    );
+  }
+
   // --- Render: Assign Role modal ---
 
   renderAssignRoleModal() {
@@ -1154,7 +1300,12 @@ export class RBACAdmin extends React.Component {
       >
         <Tabs
           activeKey={activeMainTab}
-          onChange={(key) => this.setState({ activeMainTab: key })}
+          onChange={(key) => {
+            this.setState({ activeMainTab: key });
+            if (key === 'assignments') {
+              this.fetchAssignmentsData();
+            }
+          }}
         >
           <TabPane tab="Custom Roles" key="custom">
             {this.renderCustomRolesTab()}
@@ -1166,6 +1317,7 @@ export class RBACAdmin extends React.Component {
             {this.renderAssignmentsTab()}
           </TabPane>
         </Tabs>
+        {this.renderCreateRoleModal()}
         {this.renderAssignRoleModal()}
         {this.renderPermissionModal()}
       </div>

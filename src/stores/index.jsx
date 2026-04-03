@@ -19,6 +19,7 @@ import globalComputeHostStore from 'stores/nova/compute-host';
 import globalHypervisorStore from 'stores/nova/hypervisor';
 import globalStackStore from 'stores/heat/stack';
 import globalRbacPoliciesStore from 'stores/neutron/rbac-policies';
+import globalRBACPermissionsStore from 'stores/skyline/rbac-permissions';
 
 export default {
   globalFloatingIpsStore,
@@ -42,4 +43,5 @@ export default {
   globalStackStore,
   globalPortStore,
   globalRbacPoliciesStore,
+  globalRBACPermissionsStore,
 };

@@ -715,8 +715,19 @@ export default class BaseList extends React.Component {
         // RBAC permission denied — show PermissionDenied instead of table
         this.setState({ permissionDenied: true });
       } else if (status === 401) {
-        const title = t('The session has expired, please log in again.');
-        Notify.errorWithDetail(null, title);
+        // Check if this is a real session expiry or a permission denial
+        const errMsg = String(data || message || '').toLowerCase();
+        const isPermissionDenied =
+          errMsg.includes('not authorized') ||
+          errMsg.includes('not allowed') ||
+          errMsg.includes('permission') ||
+          errMsg.includes('access');
+        if (isPermissionDenied) {
+          this.setState({ permissionDenied: true });
+        } else {
+          const title = t('The session has expired, please log in again.');
+          Notify.errorWithDetail(null, title);
+        }
       } else if (status === 500) {
         const systemErr = t('System is error, please try again later.');
         const title = `${t('Get {name} error.', {

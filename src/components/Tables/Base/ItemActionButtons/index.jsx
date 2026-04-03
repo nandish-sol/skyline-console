@@ -19,6 +19,7 @@ import { DownOutlined } from '@ant-design/icons';
 import { isArray, isEqual } from 'lodash';
 import classnames from 'classnames';
 import globalLicenseStore from 'stores/skyline/license';
+import globalRBACPermissionsStore from 'stores/skyline/rbac-permissions';
 import { getAllowedResults, getAction } from '../Action';
 import ActionButton from '../ActionButton';
 import styles from './index.less';
@@ -104,11 +105,18 @@ function DropdownActionButton({
         const isAllowed = getIsAllowedValue(alloweds, it.allowedIndex);
         const key = it.key || `key-more-${index}`;
         const config = getActionConf(it.action, item);
-        // Show license-disabled items (greyed out) instead of hiding
+        // Show license/RBAC-disabled items (greyed out) instead of hiding
         const licenseBlocked =
           globalLicenseStore.restrictedMode &&
           !globalLicenseStore.isActionAllowed(config.id || config.title || '');
-        if (!isAllowed && !licenseBlocked) {
+        const actionPolicy = it.action
+          ? it.action.policy ||
+            (it.action.constructor && it.action.constructor.policy)
+          : null;
+        const rbacBlocked = actionPolicy
+          ? !globalRBACPermissionsStore.isAllowed(actionPolicy)
+          : false;
+        if (!isAllowed && !licenseBlocked && !rbacBlocked) {
           return null;
         }
         allowedFatherCount += 1;
@@ -134,7 +142,17 @@ function DropdownActionButton({
       const menuItems = it.actions.map((action, actionIndex) => {
         const isAllowed = getIsAllowedValue(alloweds, action.allowedIndex);
         const key = action.key || `key-more-${index}-${actionIndex}`;
-        if (isAllowed) {
+        // RBAC check for submenu items (same pattern as direct actions)
+        const subActionPolicy = action.action
+          ? action.action.policy ||
+            (action.action.constructor && action.action.constructor.policy)
+          : null;
+        const subRbacBlocked = subActionPolicy
+          ? !globalRBACPermissionsStore.isAllowed(subActionPolicy)
+          : false;
+        if (!isAllowed && !subRbacBlocked) {
+          // Neither allowed nor RBAC-blocked — truly not allowed, skip
+        } else {
           allowedCount += 1;
           allowedFatherCount += 1;
           allowedAll += 1;
@@ -144,7 +162,7 @@ function DropdownActionButton({
           <Menu.Item key={key}>
             <ActionButton
               {...config}
-              isAllowed={isAllowed}
+              isAllowed={isAllowed && !subRbacBlocked}
               buttonType="link"
               item={item}
               onFinishAction={onFinishAction}
