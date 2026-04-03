@@ -21,6 +21,7 @@ import {
   Button,
   Modal,
   Form,
+  Input,
   Select,
   Spin,
   Popconfirm,
@@ -205,6 +206,11 @@ export class RBACAdmin extends React.Component {
       modalPermissions: {},
       modalActiveTab: 'nova',
       modalSaving: false,
+
+      // Create role modal
+      createRoleVisible: false,
+      createRoleName: '',
+      createRoleLoading: false,
 
       // Assign role modal
       assignModalVisible: false,
@@ -441,6 +447,34 @@ export class RBACAdmin extends React.Component {
       ),
     },
   ];
+
+  handleCreateRole = async () => {
+    const { createRoleName } = this.state;
+    if (!createRoleName || !createRoleName.trim()) {
+      message.warning('Please enter a role name');
+      return;
+    }
+    this.setState({ createRoleLoading: true });
+    try {
+      await apiFetch('/api/v1/rbac/roles', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: createRoleName.trim(),
+          description: '',
+        }),
+      });
+      message.success(`Role "${createRoleName.trim()}" created`);
+      this.setState({
+        createRoleVisible: false,
+        createRoleName: '',
+        createRoleLoading: false,
+      });
+      this.fetchAll();
+    } catch (err) {
+      message.error(`Failed to create role: ${err.message}`);
+      this.setState({ createRoleLoading: false });
+    }
+  };
 
   handleManagePermissions = (record) => {
     const { savedPermissions } = this.state;
@@ -762,6 +796,13 @@ export class RBACAdmin extends React.Component {
             marginBottom: 16,
           }}
         >
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => this.setState({ createRoleVisible: true })}
+          >
+            Create Role
+          </Button>
           {hasCustomSelected && (
             <Popconfirm
               title="Delete selected custom roles? This cannot be undone."
@@ -1031,6 +1072,39 @@ export class RBACAdmin extends React.Component {
     );
   }
 
+  // --- Render: Create Role modal ---
+
+  renderCreateRoleModal() {
+    const { createRoleVisible, createRoleName, createRoleLoading } = this.state;
+    return (
+      <Modal
+        title="Create Custom Role"
+        visible={createRoleVisible}
+        onOk={this.handleCreateRole}
+        onCancel={() =>
+          this.setState({
+            createRoleVisible: false,
+            createRoleName: '',
+          })
+        }
+        confirmLoading={createRoleLoading}
+        okText="Create"
+      >
+        <Form layout="vertical">
+          <Form.Item label="Role Name" required>
+            <Input
+              value={createRoleName}
+              onChange={(e) =>
+                this.setState({ createRoleName: e.target.value })
+              }
+              placeholder="e.g. storage-admin, network-viewer"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    );
+  }
+
   // --- Render: Assign Role modal ---
 
   renderAssignRoleModal() {
@@ -1180,6 +1254,7 @@ export class RBACAdmin extends React.Component {
             {this.renderAssignmentsTab()}
           </TabPane>
         </Tabs>
+        {this.renderCreateRoleModal()}
         {this.renderAssignRoleModal()}
         {this.renderPermissionModal()}
       </div>
