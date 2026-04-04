@@ -43,9 +43,6 @@ export class Secrets extends Base {
   }
 
   get actionConfigs() {
-    if (this.isAdminPage) {
-      return {};
-    }
     return actionConfigs;
   }
 

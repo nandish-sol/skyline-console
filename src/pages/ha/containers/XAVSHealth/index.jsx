@@ -301,7 +301,7 @@ export class XAVSHealth extends Component {
           </span>
         }
         size="small"
-        style={{ height: '100%' }}
+        style={{ width: '100%' }}
       >
         {items.map((item) => (
           <div
@@ -392,7 +392,7 @@ export class XAVSHealth extends Component {
             />
           </Card>
         </Col>
-        <Col span={8} style={{ display: 'flex' }}>
+        <Col span={8} style={{ display: 'flex', alignSelf: 'flex-start' }}>
           {this.renderGaleraCard()}
         </Col>
       </Row>
