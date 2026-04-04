@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { observable, action, computed } from 'mobx';
+import { observable, action } from 'mobx';
 
 /**
  * RBAC permission keys in the DB use the format: "{service}:{action}"
@@ -32,11 +32,11 @@ class RBACPermissionsStore {
 
   @observable isLoaded = false;
 
-  @computed get hasRBACRestrictions() {
-    return this.hasCustomRole && this.isLoaded;
-  }
-
   @observable fetchError = false;
+
+  _retryTimer = null;
+
+  _permKeys = [];
 
   @action
   async fetchPermissions() {
@@ -48,15 +48,35 @@ class RBACPermissionsStore {
       if (resp.ok) {
         const result = await resp.json();
         this.permissions = result.permissions || {};
+        this._permKeys = Object.keys(this.permissions);
         this.hasCustomRole = result.has_custom_role || false;
         this.fetchError = false;
+      } else {
+        // Non-OK response: keep last known permissions, schedule retry
+        this.fetchError = true;
+        this._scheduleRetry();
       }
       this.isLoaded = true;
     } catch (e) {
       // On error: keep last known permissions, retry after 10s
       this.fetchError = true;
       this.isLoaded = true;
-      setTimeout(() => this.fetchPermissions(), 10000);
+      this._scheduleRetry();
+    }
+  }
+
+  _scheduleRetry() {
+    this._clearRetry();
+    this._retryTimer = setTimeout(() => {
+      this._retryTimer = null;
+      this.fetchPermissions();
+    }, 10000);
+  }
+
+  _clearRetry() {
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = null;
     }
   }
 
@@ -72,7 +92,7 @@ class RBACPermissionsStore {
     }
 
     const policies = Array.isArray(policy) ? policy : [policy];
-    const permKeys = Object.keys(this.permissions);
+    const permKeys = this._permKeys || Object.keys(this.permissions);
 
     const blocked = policies.some((policyStr) => {
       // Exact match: key ends with ":{policy}" or key === policy
@@ -89,9 +109,11 @@ class RBACPermissionsStore {
 
   @action
   reset() {
+    this._clearRetry();
     this.permissions = {};
     this.hasCustomRole = false;
     this.isLoaded = false;
+    this.fetchError = false;
   }
 
   // Called by rootStore.clearData() on logout/project switch
