@@ -49,6 +49,8 @@ import ConfirmResize from './ConfirmResize';
 import RevertResize from './RevertResize';
 import ModifyTags from './ModifyTags';
 import XloudAdjust from './XloudAdjust';
+import Clone from './Clone';
+import ConvertTemplate from './ConvertTemplate';
 import AttachPCI from './AttachPCI';
 import DetachPCI from './DetachPCI';
 
@@ -119,6 +121,10 @@ const actionConfigs = {
       {
         title: t('Backups & Snapshots'),
         actions: [CreateSnapshot],
+      },
+      {
+        title: t('Clone & Template'),
+        actions: [Clone, ConvertTemplate],
       },
       {
         title: t('Configuration Update'),

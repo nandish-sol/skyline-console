@@ -553,12 +553,11 @@ export const actionColumn = (self) => {
 export const SimpleTag = ({ tag, index }) => {
   const isLongTag = tag.length > 20;
   const tagText = isLongTag ? `${tag.slice(0, 20)}...` : tag;
+  const tagColor = tag.startsWith('Cloned_from:')
+    ? 'blue'
+    : projectTagsColors[index % 10];
   const tagEl = (
-    <Tag
-      key={tag}
-      color={projectTagsColors[index % 10]}
-      style={{ marginTop: 2, marginBottom: 2 }}
-    >
+    <Tag key={tag} color={tagColor} style={{ marginTop: 2, marginBottom: 2 }}>
       <span style={{ whiteSpace: 'pre-wrap' }}>{tagText}</span>
     </Tag>
   );

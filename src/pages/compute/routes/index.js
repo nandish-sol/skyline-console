@@ -37,6 +37,8 @@ import HostAggregate from '../containers/HostAggregate';
 import BareMetalNode from '../containers/BareMetalNode';
 import BareMetalNodeDetail from '../containers/BareMetalNode/Detail';
 import CreateNode from '../containers/BareMetalNode/actions/Create';
+import Templates from '../containers/Templates';
+import TemplateDetail from '../containers/Templates/Detail';
 
 const PATH = '/compute';
 export default [
@@ -173,6 +175,22 @@ export default [
       {
         path: `${PATH}/baremetal-node-admin/edit/:id`,
         component: CreateNode,
+        exact: true,
+      },
+      { path: `${PATH}/template`, component: Templates, exact: true },
+      {
+        path: `${PATH}/template-admin`,
+        component: Templates,
+        exact: true,
+      },
+      {
+        path: `${PATH}/template/detail/:id`,
+        component: TemplateDetail,
+        exact: true,
+      },
+      {
+        path: `${PATH}/template-admin/detail/:id`,
+        component: TemplateDetail,
         exact: true,
       },
       { path: '*', component: E404 },

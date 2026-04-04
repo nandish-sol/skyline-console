@@ -85,7 +85,9 @@ export class ImageStore extends Base {
     if (items.length === 0) {
       return items;
     }
-    return items.filter((it) => !isSnapshot(it));
+    return items.filter(
+      (it) => !isSnapshot(it) && it.xloud_template !== 'true'
+    );
   }
 
   @action

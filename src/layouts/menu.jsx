@@ -140,6 +140,21 @@ const renderMenu = (t) => {
           ],
         },
         {
+          path: '/compute/template',
+          name: t('VM Templates'),
+          key: 'computeTemplate',
+          level: 1,
+          children: [
+            {
+              path: /^\/compute\/template\/detail\/[^/]+$/,
+              name: t('Template Detail'),
+              key: 'computeTemplateDetail',
+              level: 2,
+              routePath: '/compute/template/detail/:id',
+            },
+          ],
+        },
+        {
           path: '/compute/keypair',
           name: t('Key Pairs'),
           key: 'keypair',
