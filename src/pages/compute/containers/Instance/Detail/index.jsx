@@ -29,7 +29,6 @@ import BaseDetail from './BaseDetail';
 import PCIDeviceList from './PCI';
 import SecurityGroup from './SecurityGroup';
 import ActionLog from './ActionLog';
-import Monitoring from './Monitoring';
 import Snapshots from '../../InstanceSnapshot';
 import actionConfigs from '../actions';
 import Log from './Log';
@@ -125,11 +124,6 @@ export class InstanceDetail extends Base {
         title: t('Detail'),
         key: 'detail',
         component: BaseDetail,
-      },
-      {
-        title: t('Monitoring'),
-        key: 'monitor',
-        component: Monitoring,
       },
       {
         title: t('Instance Snapshots'),
