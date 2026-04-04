@@ -545,14 +545,22 @@ export class RBACAdmin extends React.Component {
     const svc = ruleKey.split(':')[0];
     const deps = [];
 
-    // Service-specific list/view prerequisites
+    // Service-specific list/view prerequisites (always enabled for any action in the service)
     const PREREQ_MAP = {
       nova: [
         'nova:os_compute_api:servers:index',
         'nova:os_compute_api:servers:show',
+        'nova:os_compute_api:os-availability-zone:list',
+        'nova:os_compute_api:os-flavor-access',
       ],
       cinder: ['cinder:volume:get_all', 'cinder:volume:get'],
-      neutron: ['neutron:get_network', 'neutron:get_subnet'],
+      neutron: [
+        'neutron:get_network',
+        'neutron:get_subnet',
+        'neutron:get_port',
+        'neutron:get_security_group',
+        'neutron:get_security_group_rule',
+      ],
       glance: ['glance:get_images', 'glance:get_image'],
       heat: ['heat:stacks:index', 'heat:stacks:show'],
       octavia: ['octavia:os_load-balancer_api:loadbalancer:get_all'],
@@ -560,9 +568,39 @@ export class RBACAdmin extends React.Component {
       barbican: ['barbican:secrets:get'],
     };
 
+    // Action-specific prerequisites (enabling a specific action also enables these)
+    const ACTION_PREREQ = {
+      'nova:os_compute_api:servers:create': [
+        'nova:os_compute_api:os-keypairs:index',
+        'nova:os_compute_api:os-keypairs:create',
+        'nova:os_compute_api:os-remote-consoles',
+        'nova:os_compute_api:os-server-groups:index',
+        'nova:os_compute_api:os-volumes-attachments:create',
+        'glance:get_images',
+        'glance:get_image',
+        'neutron:get_network',
+        'neutron:get_subnet',
+        'neutron:get_port',
+        'neutron:get_security_group',
+        'neutron:get_security_group_rule',
+        'cinder:volume:get_all',
+        'cinder:volume:get',
+      ],
+      'nova:os_compute_api:servers:delete': [
+        'nova:os_compute_api:os-volumes-attachments:delete',
+      ],
+    };
+
     const svcDeps = PREREQ_MAP[svc] || [];
     svcDeps.forEach((dep) => {
       if (dep !== ruleKey) {
+        deps.push(dep);
+      }
+    });
+
+    const actionDeps = ACTION_PREREQ[ruleKey] || [];
+    actionDeps.forEach((dep) => {
+      if (dep !== ruleKey && deps.indexOf(dep) < 0) {
         deps.push(dep);
       }
     });
