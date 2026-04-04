@@ -33,9 +33,9 @@ export default class index extends Component {
   constructor(props) {
     super(props);
     const { value, max, min, description } = props;
-    const valueToInt = parseInt(value, 10);
+    const parsedValue = Number(value);
     this.state = {
-      inputValue: Number.isNaN(valueToInt) ? 1 : value,
+      inputValue: Number.isNaN(parsedValue) ? 1 : value,
       inputMax: max,
       inputMin: min,
       description,
@@ -74,12 +74,15 @@ export default class index extends Component {
 
   render() {
     const { inputValue, inputMax, inputMin, description } = this.state;
+    const { step } = this.props;
+    const hasDecimalStep = step && step < 1;
     return (
       <Row>
         <Col span={16}>
           <Slider
             min={inputMin}
             max={inputMax}
+            step={step || 1}
             onChange={this.onChange}
             value={inputValue}
           />
@@ -88,9 +91,9 @@ export default class index extends Component {
           <InputNumber
             min={inputMin}
             max={inputMax}
+            step={step || 1}
             style={{ marginLeft: 8 }}
-            precision={0}
-            formatter={(value) => `$ ${value}`.replace(/\D/g, '')}
+            precision={hasDecimalStep ? 2 : 0}
             value={inputValue}
             onChange={this.onChange}
           />

@@ -790,13 +790,6 @@ const renderMenu = (t) => {
             },
           ],
         },
-        {
-          path: '/identity/rbac-admin',
-          name: t('RBAC Management'),
-          key: 'rbacManagementAdmin',
-          level: 1,
-          children: [],
-        },
       ],
     },
     // {
@@ -945,14 +938,6 @@ const renderMenu = (t) => {
           path: '/monitor-center/logging-admin',
           name: t('Logging'),
           key: 'loggingAdmin',
-          level: 1,
-          children: [],
-          hasBreadcrumb: true,
-        },
-        {
-          path: '/monitor-center/activity-log-admin',
-          name: t('Activity Log'),
-          key: 'activityLogAdmin',
           level: 1,
           children: [],
           hasBreadcrumb: true,

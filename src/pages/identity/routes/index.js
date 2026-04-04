@@ -30,7 +30,6 @@ import UserGroupEdit from '../containers/UserGroup/actions/Edit';
 import UserGroupDetail from '../containers/UserGroup/Detail';
 import Role from '../containers/Role';
 import RoleDetail from '../containers/Role/Detail';
-import RBACAdmin from '../containers/RBACAdmin';
 
 const PATH = '/identity';
 export default [
@@ -99,7 +98,7 @@ export default [
         component: ProjectDetail,
         exact: true,
       },
-      { path: `${PATH}/rbac-admin`, component: RBACAdmin, exact: true },
+
       { path: '*', component: E404 },
     ],
   },

@@ -14,7 +14,7 @@
 
 import BaseLayout from 'layouts/Basic';
 import E404 from 'pages/base/containers/404';
-import ActivityLog from 'pages/management/containers/ActivityLog';
+
 import XAVSHealth from 'pages/ha/containers/XAVSHealth';
 import PhysicalNode from '../containers/PhysicalNode';
 import StorageCluster from '../containers/StorageCluster';
@@ -59,11 +59,6 @@ export default [
       {
         path: `${PATH}/logging-admin`,
         component: Logging,
-        exact: true,
-      },
-      {
-        path: `${PATH}/activity-log-admin`,
-        component: ActivityLog,
         exact: true,
       },
       {
