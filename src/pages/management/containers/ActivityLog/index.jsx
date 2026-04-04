@@ -52,6 +52,17 @@ const ACTION_COLOR_MAP = {
   detach: 'purple',
   reboot: 'magenta',
   suspend: 'gold',
+  resume: 'lime',
+  pause: 'gold',
+  unpause: 'lime',
+  shelve: 'purple',
+  unshelve: 'geekblue',
+  migrate: 'blue',
+  snapshot: 'cyan',
+  lock: 'volcano',
+  unlock: 'green',
+  rescue: 'orange',
+  authenticate: 'default',
   unknown: 'default',
 };
 

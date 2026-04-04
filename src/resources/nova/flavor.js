@@ -147,23 +147,26 @@ export const getBaseColumns = (self) => [
     title: t('Category'),
     dataIndex: 'category',
     valueMap: flavorCategoryList,
+    width: 100,
   },
   {
     title: t('CPU'),
     dataIndex: 'vcpus',
     isHideable: true,
+    width: 55,
   },
   {
     title: t('Memory'),
     dataIndex: 'ram',
     isHideable: true,
+    width: 90,
     render: (ram) => formatSize(ram, 2),
   },
   {
-    title: t('Internal Network Bandwidth (Gbps)'),
+    title: t('BW (Gbps)'),
     dataIndex: 'quota:vif_outbound_average',
     isHideable: true,
-    width: 120,
+    width: 80,
     render: (value) => {
       if (!value) {
         return '-';
@@ -172,14 +175,16 @@ export const getBaseColumns = (self) => [
     },
   },
   {
-    title: t('Ephemeral Disk (GiB)'),
+    title: t('Ephemeral (GiB)'),
     dataIndex: 'OS-FLV-EXT-DATA:ephemeral',
     isHideable: true,
+    width: 90,
   },
   {
-    title: t('Storage IOPS'),
+    title: t('IOPS'),
     dataIndex: 'quota:disk_total_iops_sec',
     isHideable: true,
+    width: 65,
     render: (value) => {
       if (!value) {
         return '-';
@@ -195,6 +200,7 @@ export const extraColumns = [
     dataIndex: 'is_public',
     isHideable: true,
     valueRender: 'yesNo',
+    width: 65,
   },
 ];
 

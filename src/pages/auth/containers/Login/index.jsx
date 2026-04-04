@@ -187,7 +187,10 @@ export class Login extends Component {
       name: 'domain',
       required: true,
       render: () => (
-        <Input placeholder={t('<username> or <username>@<domain>')} />
+        <Input
+          placeholder={t('<username> or <username>@<domain>')}
+          autoComplete="username"
+        />
       ),
       extra: t('Tips: without domain means "Default" domain.'),
       rules: [{ required: true, validator: this.usernameDomainValidator }],
@@ -203,7 +206,12 @@ export class Login extends Component {
       name: 'password',
       required: true,
       message: t('Please input your Password!'),
-      render: () => <Input.Password placeholder={t('Password')} />,
+      render: () => (
+        <Input.Password
+          placeholder={t('Password')}
+          autoComplete="current-password"
+        />
+      ),
     };
     const extraItem = {
       name: 'extra',
