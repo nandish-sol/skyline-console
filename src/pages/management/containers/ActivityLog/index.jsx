@@ -95,15 +95,33 @@ const STATUS_COLOR = (status) => {
 };
 
 const SERVICE_LABELS = {
-  nova: 'Nova',
-  cinder: 'Cinder',
-  neutron: 'Neutron',
-  keystone: 'Keystone',
-  glance: 'Glance',
-  heat: 'Heat',
-  octavia: 'Octavia',
-  watcher: 'Watcher',
-  horizon: 'Horizon',
+  nova: 'Compute',
+  cinder: 'Storage',
+  neutron: 'Network',
+  keystone: 'Identity',
+  glance: 'Image',
+  heat: 'Orchestration',
+  octavia: 'Load Balancer',
+  watcher: 'Optimization',
+  horizon: 'Dashboard',
+  barbican: 'Key Manager',
+  designate: 'DNS',
+  masakari: 'Instance HA',
+  manilav2: 'Shared FS',
+};
+
+const SERVICE_COLOR = {
+  nova: 'blue',
+  cinder: 'purple',
+  neutron: 'green',
+  keystone: 'gold',
+  glance: 'cyan',
+  heat: 'volcano',
+  octavia: 'geekblue',
+  watcher: 'magenta',
+  horizon: 'default',
+  barbican: 'orange',
+  designate: 'lime',
 };
 
 @inject('rootStore')
@@ -252,7 +270,7 @@ class ActivityLog extends Component {
       title: 'Time',
       dataIndex: 'timestamp',
       key: 'timestamp',
-      width: 170,
+      width: 160,
       render: (val) => {
         if (!val) return '-';
         const d = new Date(val);
@@ -271,8 +289,12 @@ class ActivityLog extends Component {
       title: 'Service',
       dataIndex: 'service',
       key: 'service',
-      width: 90,
-      render: (val) => <Tag>{SERVICE_LABELS[val] || val || '-'}</Tag>,
+      width: 100,
+      render: (val) => (
+        <Tag color={SERVICE_COLOR[val] || 'default'}>
+          {SERVICE_LABELS[val] || val || '-'}
+        </Tag>
+      ),
     },
     {
       title: 'Action',
@@ -287,16 +309,25 @@ class ActivityLog extends Component {
       title: 'Resource',
       dataIndex: 'resource_type',
       key: 'resource_type',
-      width: 90,
+      width: 110,
       render: (val) => val || '-',
     },
     {
-      title: 'Name',
-      dataIndex: 'resource_name',
-      key: 'resource_name',
-      width: 160,
+      title: 'Resource ID',
+      dataIndex: 'resource_id',
+      key: 'resource_id',
+      width: 130,
       ellipsis: true,
-      render: (val) => val || '-',
+      render: (val) => {
+        if (!val) return '-';
+        return (
+          <Tooltip title={val}>
+            <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+              {val.substring(0, 13)}...
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Detail',
@@ -307,8 +338,8 @@ class ActivityLog extends Component {
         if (!val && !record.http_method) return '-';
         const methodColorMap = {
           DELETE: 'red',
-          POST: 'blue',
-          PUT: 'orange',
+          POST: 'green',
+          PUT: 'blue',
           PATCH: 'orange',
         };
         const methodColor = methodColorMap[record.http_method] || 'default';
@@ -320,7 +351,9 @@ class ActivityLog extends Component {
                   {record.http_method}
                 </Tag>
               )}
-              {val ? val.substring(0, 55) : '-'}
+              <span style={{ fontSize: 12 }}>
+                {val ? val.substring(0, 50) : '-'}
+              </span>
             </span>
           </Tooltip>
         );
@@ -330,7 +363,7 @@ class ActivityLog extends Component {
       title: 'Status',
       dataIndex: 'http_status',
       key: 'http_status',
-      width: 100,
+      width: 95,
       render: (val) => {
         const code = parseInt(val, 10);
         if (!code) return '-';
@@ -346,10 +379,14 @@ class ActivityLog extends Component {
       render: (val, record) => {
         if (val) return val;
         const uid = record.user_id || '';
-        if (!uid || uid === 'system') return uid || '-';
+        if (!uid) return <span style={{ color: '#bbb' }}>-</span>;
         return (
           <Tooltip title={uid}>
-            <span style={{ color: '#999' }}>{uid.substring(0, 8)}...</span>
+            <span
+              style={{ color: '#999', fontFamily: 'monospace', fontSize: 12 }}
+            >
+              {uid.substring(0, 8)}...
+            </span>
           </Tooltip>
         );
       },
@@ -358,15 +395,31 @@ class ActivityLog extends Component {
       title: 'Project',
       dataIndex: 'project_name',
       key: 'project_name',
-      width: 120,
+      width: 110,
       render: (val, record) => {
         if (val) return val;
         const pid = record.project_id || '';
-        if (!pid) return '-';
+        if (!pid) return <span style={{ color: '#bbb' }}>-</span>;
         return (
           <Tooltip title={pid}>
-            <span style={{ color: '#999' }}>{pid.substring(0, 8)}...</span>
+            <span
+              style={{ color: '#999', fontFamily: 'monospace', fontSize: 12 }}
+            >
+              {pid.substring(0, 8)}...
+            </span>
           </Tooltip>
+        );
+      },
+    },
+    {
+      title: 'Source IP',
+      dataIndex: 'client_ip',
+      key: 'client_ip',
+      width: 110,
+      render: (val) => {
+        if (!val) return <span style={{ color: '#bbb' }}>-</span>;
+        return (
+          <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{val}</span>
         );
       },
     },
@@ -374,7 +427,7 @@ class ActivityLog extends Component {
       title: 'Node',
       dataIndex: 'node',
       key: 'node',
-      width: 60,
+      width: 55,
     },
     {
       title: 'Time (s)',
@@ -560,7 +613,7 @@ class ActivityLog extends Component {
             }}
             onChange={this.handleTableChange}
             size="small"
-            scroll={{ x: 1400, y: 'calc(100vh - 420px)' }}
+            scroll={{ x: 1500, y: 'calc(100vh - 420px)' }}
           />
         </Spin>
       </div>
