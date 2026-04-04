@@ -1,3 +1,4 @@
+import Create from './Create';
 import Delete from './Delete';
 
 const actionConfigs = {
@@ -9,6 +10,7 @@ const actionConfigs = {
     ],
   },
   batchActions: [Delete],
+  primaryActions: [Create],
 };
 
 export default actionConfigs;
