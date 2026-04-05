@@ -49,17 +49,16 @@ export class XloudAdjust extends ModalAction {
       loading: true,
       fetchError: null,
       vcpuStep: 1,
-      changeSummary: null,
     };
+    this.changeSummary = null;
     this.fetchXloudStatus();
   }
 
   get successText() {
-    const { changeSummary } = this.state || {};
-    if (changeSummary) {
+    if (this.changeSummary) {
       return t('Adjust resources successfully, instance: {name}. {summary}', {
         name: this.instanceName,
-        summary: changeSummary,
+        summary: this.changeSummary,
       });
     }
     return t('Adjust resources successfully, instance: {name}.', {
@@ -347,9 +346,7 @@ export class XloudAdjust extends ModalAction {
         })
       );
     }
-    this.setState({
-      changeSummary: changes.length ? changes.join(', ') : null,
-    });
+    this.changeSummary = changes.length ? changes.join(', ') : null;
 
     // POST /os-xloud-adjust/{id} (top-level Nova endpoint)
     return client.nova.request.post(`os-xloud-adjust/${id}`, payload);
