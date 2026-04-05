@@ -49,8 +49,22 @@ export class XloudAdjust extends ModalAction {
       loading: true,
       fetchError: null,
       vcpuStep: 1,
+      changeSummary: null,
     };
     this.fetchXloudStatus();
+  }
+
+  get successText() {
+    const { changeSummary } = this.state || {};
+    if (changeSummary) {
+      return t('Adjust resources successfully, instance: {name}. {summary}', {
+        name: this.instanceName,
+        summary: changeSummary,
+      });
+    }
+    return t('Adjust resources successfully, instance: {name}.', {
+      name: this.instanceName,
+    });
   }
 
   get name() {
@@ -304,6 +318,8 @@ export class XloudAdjust extends ModalAction {
     const { xloudStatus, vcpuStep } = this.state;
 
     const payload = {};
+    const oldVcpus = xloudStatus[STATUS_CURRENT_VCPUS];
+    const oldMemMb = xloudStatus[STATUS_CURRENT_MEMORY];
 
     // vCPU: align to step
     if (values.current_vcpus !== undefined && values.current_vcpus !== null) {
@@ -330,6 +346,34 @@ export class XloudAdjust extends ModalAction {
     if (values.persist !== undefined) {
       payload.persist = !!values.persist;
     }
+
+    // Build change summary (only show fields that actually changed)
+    const changes = [];
+    if (
+      payload.current_vcpus !== undefined &&
+      payload.current_vcpus !== oldVcpus
+    ) {
+      changes.push(
+        t('vCPUs: {from} → {to}', {
+          from: oldVcpus,
+          to: payload.current_vcpus,
+        })
+      );
+    }
+    if (
+      payload.current_memory_mb !== undefined &&
+      payload.current_memory_mb !== oldMemMb
+    ) {
+      changes.push(
+        t('Memory: {from} GB → {to} GB', {
+          from: mbToGb(oldMemMb),
+          to: mbToGb(payload.current_memory_mb),
+        })
+      );
+    }
+    this.setState({
+      changeSummary: changes.length ? changes.join(', ') : null,
+    });
 
     // POST /os-xloud-adjust/{id} (top-level Nova endpoint)
     return client.nova.request.post(`os-xloud-adjust/${id}`, payload);
