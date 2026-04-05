@@ -14,7 +14,13 @@
 
 import React from 'react';
 import ImageType from 'components/ImageType';
-import { Tag, Tooltip } from 'antd';
+import { Tag, Tooltip, Popover, Descriptions } from 'antd';
+import {
+  isHotaddEnabled,
+  mbToGb,
+  FLAVOR_SPEC_MIN_CPU,
+  FLAVOR_SPEC_MIN_MEMORY,
+} from 'resources/nova/xloud';
 import { ActionLogStore } from 'stores/nova/action-log';
 import { ironicOriginEndpoint } from 'client/client/constants';
 import { projectTagsColors } from 'src/utils/constants';
@@ -305,6 +311,105 @@ export const isIronicInstance = (item) => {
   return extra[':architecture'] === 'bare_metal';
 };
 
+// Keys shown in the Hot-Add section of the flavor popover.
+const HOTADD_KEYS = new Set([FLAVOR_SPEC_MIN_CPU, FLAVOR_SPEC_MIN_MEMORY]);
+
+const flavorPopoverContent = (flavorInfo) => {
+  if (!flavorInfo) return null;
+  const { vcpus, ram, disk = 0, extra_specs: extras = {} } = flavorInfo;
+  const hotadd = isHotaddEnabled(extras);
+  const minCpu = extras[FLAVOR_SPEC_MIN_CPU];
+  const minMemMb = extras[FLAVOR_SPEC_MIN_MEMORY]
+    ? parseInt(extras[FLAVOR_SPEC_MIN_MEMORY], 10)
+    : null;
+  const otherSpecs = Object.entries(extras).filter(
+    ([k]) => !HOTADD_KEYS.has(k)
+  );
+  return (
+    <div style={{ maxWidth: 420 }}>
+      <Descriptions
+        column={1}
+        size="small"
+        bordered
+        labelStyle={{ width: '35%' }}
+      >
+        <Descriptions.Item label={t('VCPUs')}>{vcpus}</Descriptions.Item>
+        <Descriptions.Item label={t('RAM')}>
+          {mbToGb(ram)} {t('GB')}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('Disk')}>
+          {disk} {t('GB')}
+        </Descriptions.Item>
+      </Descriptions>
+      {hotadd && (
+        <Descriptions
+          column={1}
+          size="small"
+          bordered
+          title={t('Hot-Add Enabled')}
+          style={{ marginTop: 8 }}
+          labelStyle={{ width: '35%' }}
+        >
+          <Descriptions.Item label={t('vCPUs')}>
+            <Tag color="orange">
+              {t('Min')}: {minCpu || '-'}
+            </Tag>
+            <Tag color="cyan">
+              {t('Max')}: {vcpus}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label={t('Memory')}>
+            <Tag color="orange">
+              {t('Min')}: {minMemMb ? `${mbToGb(minMemMb)} ${t('GB')}` : '-'}
+            </Tag>
+            <Tag color="cyan">
+              {t('Max')}: {mbToGb(ram)} {t('GB')}
+            </Tag>
+          </Descriptions.Item>
+        </Descriptions>
+      )}
+      {otherSpecs.length > 0 && (
+        <Descriptions
+          column={1}
+          size="small"
+          bordered
+          title={t('Additional Properties')}
+          style={{ marginTop: 8 }}
+          labelStyle={{ width: '35%' }}
+        >
+          {otherSpecs.map(([k, v]) => (
+            <Descriptions.Item
+              key={k}
+              label={<code style={{ fontSize: 11 }}>{k}</code>}
+            >
+              <code style={{ fontSize: 11 }}>{String(v)}</code>
+            </Descriptions.Item>
+          ))}
+        </Descriptions>
+      )}
+    </div>
+  );
+};
+
+export const flavorPopoverRender = (value, record) => {
+  const flavorInfo = record && record.flavor_info;
+  if (!flavorInfo) return value || '-';
+  const title = t('Flavor Details: {name}', {
+    name: flavorInfo.original_name || value,
+  });
+  return (
+    <Popover
+      title={title}
+      content={flavorPopoverContent(flavorInfo)}
+      trigger="hover"
+      placement="right"
+      overlayStyle={{ maxWidth: 480 }}
+    >
+      <span className="link-class">{value || flavorInfo.original_name}</span>
+    </Popover>
+  );
+};
+
 export const instanceColumnsBackend = [
   {
     title: t('Name'),
@@ -357,6 +462,7 @@ export const instanceColumnsBackend = [
     title: t('Flavor'),
     dataIndex: 'flavor',
     sorter: false,
+    render: (value, record) => flavorPopoverRender(value, record),
   },
   {
     title: t('Status'),

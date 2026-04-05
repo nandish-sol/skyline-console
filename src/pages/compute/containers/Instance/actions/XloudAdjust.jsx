@@ -50,7 +50,20 @@ export class XloudAdjust extends ModalAction {
       fetchError: null,
       vcpuStep: 1,
     };
+    this.changeSummary = null;
     this.fetchXloudStatus();
+  }
+
+  get successText() {
+    if (this.changeSummary) {
+      return t('Adjust resources successfully, instance: {name}. {summary}', {
+        name: this.instanceName,
+        summary: this.changeSummary,
+      });
+    }
+    return t('Adjust resources successfully, instance: {name}.', {
+      name: this.instanceName,
+    });
   }
 
   get name() {
@@ -304,13 +317,18 @@ export class XloudAdjust extends ModalAction {
     const { xloudStatus, vcpuStep } = this.state;
 
     const payload = {};
+    const oldVcpus = xloudStatus[STATUS_CURRENT_VCPUS];
+    const oldMemMb = xloudStatus[STATUS_CURRENT_MEMORY];
 
     // vCPU: align to step
     if (values.current_vcpus !== undefined && values.current_vcpus !== null) {
       let vcpus = parseInt(values.current_vcpus, 10);
       if (vcpuStep > 1) {
         vcpus = Math.round(vcpus / vcpuStep) * vcpuStep;
-        const minVcpus = xloudStatus[STATUS_MIN_VCPUS];
+        const minVcpus = Math.min(
+          xloudStatus[STATUS_MIN_VCPUS],
+          xloudStatus[STATUS_MAX_VCPUS]
+        );
         if (vcpus < minVcpus) vcpus = minVcpus;
       }
       payload.current_vcpus = vcpus;
@@ -327,6 +345,32 @@ export class XloudAdjust extends ModalAction {
     if (values.persist !== undefined) {
       payload.persist = !!values.persist;
     }
+
+    // Build change summary (only show fields that actually changed)
+    const changes = [];
+    if (
+      payload.current_vcpus !== undefined &&
+      payload.current_vcpus !== oldVcpus
+    ) {
+      changes.push(
+        t('vCPUs: {from} → {to}', {
+          from: oldVcpus,
+          to: payload.current_vcpus,
+        })
+      );
+    }
+    if (
+      payload.current_memory_mb !== undefined &&
+      payload.current_memory_mb !== oldMemMb
+    ) {
+      changes.push(
+        t('Memory: {from} GB → {to} GB', {
+          from: mbToGb(oldMemMb),
+          to: mbToGb(payload.current_memory_mb),
+        })
+      );
+    }
+    this.changeSummary = changes.length ? changes.join(', ') : null;
 
     // POST /os-xloud-adjust/{id} (top-level Nova endpoint)
     return client.nova.request.post(`os-xloud-adjust/${id}`, payload);
