@@ -8,26 +8,47 @@ Activity Log is a centralized audit trail that captures every action performed a
 
 ## 1. End-to-End Data Flow
 
-```
- ┌──────────┐   writes   ┌──────────────┐    tails     ┌─────────┐
- │ User GUI │ ─────────> │ nova-api.log │ ───────────> │ Fluentd │ ───┐
- └──────────┘  API call  │  neutron-srv │  /var/log/   └─────────┘    │
-                         │  cinder-api  │                             │ bulk index
-                         │  glance-api  │   +                         ▼
-                         └──────────────┘              ┌──────────────────────┐
- ┌──────────┐             publishes      ┌──────────┐  │  OpenSearch cluster  │
- │ openstack│ ─────────> │  RabbitMQ  │ ─┐ consumes  │  │ openstack-audit-*    │
- │ services │ oslo.msg   │  exchanges │ ─┘ binds to  │  └──────────────────────┘
- └──────────┘ notifications│openstack│   ┌────────────────────────┐    ▲
-                         │ nova/neu/  │   │ Skyline notification  │    │
-                         │ keystone   │   │ consumer (background  ├────┘
-                         └────────────┘   │  thread in apiserver) │
-                                          └────────────────────────┘
-                                                   │
-                                                   │ bulk POST /_bulk
-                                                   ▼
- Activity Log UI <─── FastAPI ─── _search ──── OpenSearch index
- (skyline-console)    endpoint              openstack-audit-YYYY.MM.DD
+```mermaid
+flowchart LR
+    subgraph UserLayer["User Layer"]
+        GUI[User GUI<br/>Skyline Console]
+    end
+
+    subgraph OpenStackLayer["OpenStack Services"]
+        APIs[Nova API<br/>Neutron Server<br/>Cinder API<br/>Glance API<br/>Keystone]
+    end
+
+    subgraph LogPipeline["Pipeline A: HTTP Access Logs"]
+        LogFiles[(Service<br/>access logs)]
+        Fluentd[Fluentd<br/>tail + parse]
+    end
+
+    subgraph NotifPipeline["Pipeline B: Notifications"]
+        RMQ[(RabbitMQ<br/>exchanges:<br/>openstack, nova,<br/>neutron, keystone)]
+        NC[notification_consumer<br/>background thread<br/>in skyline_apiserver]
+    end
+
+    subgraph Storage["Storage"]
+        OS[(OpenSearch<br/>openstack-audit-YYYY.MM.DD)]
+    end
+
+    subgraph QueryLayer["Query Layer"]
+        Endpoint[FastAPI endpoint<br/>/api/v1/extension/activity-log]
+        UI[Activity Log UI]
+    end
+
+    GUI -->|HTTP API call| APIs
+    APIs -->|writes| LogFiles
+    LogFiles -->|tail| Fluentd
+    Fluentd -->|bulk index| OS
+
+    APIs -->|oslo.messaging<br/>notifications| RMQ
+    RMQ -->|consume<br/>routing: notifications.info| NC
+    NC -->|bulk POST /_bulk<br/>every 10s or 20 events| OS
+
+    Endpoint -->|_search| OS
+    UI -->|queries| Endpoint
+    Endpoint -->|Keystone<br/>user/project names<br/>10min TTL cache| UI
 ```
 
 ---
@@ -122,6 +143,45 @@ Index pattern: **`openstack-audit-YYYY.MM.DD`** (daily rollover)
 ---
 
 ## 4. Action & Resource Classification
+
+```mermaid
+flowchart TD
+    Start[oslo.messaging event received<br/>e.g. floatingip.update.end]
+    Strip[Strip .start/.end suffix<br/>floatingip.update.end → floatingip.update]
+    ClassA[_classify_action<br/>substring match]
+    ClassR[_classify_resource<br/>substring match]
+    Extract[_extract_resource_details<br/>parse payload]
+    Doc[OpenSearch document]
+
+    Start --> Strip
+    Strip --> ClassA
+    Strip --> ClassR
+    Start --> Extract
+
+    ClassA -->|matches 'update'| ActUpdate[action_type: update]
+    ClassA -->|matches 'associate'| ActAssoc[action_type: associate]
+    ClassA -->|matches 'delete'| ActDel[action_type: delete]
+    ClassA -->|matches 'create'/'allocate'| ActCreate[action_type: create]
+    ClassA -->|no match| ActFallback[action_type: action]
+
+    ClassR -->|contains 'floatingip'| ResFIP[resource_type: floatingip]
+    ClassR -->|contains 'instance'| ResInst[resource_type: instance]
+    ClassR -->|contains 'volume'| ResVol[resource_type: volume]
+
+    Extract -->|payload.floatingip.id| RID[resource_id: UUID]
+    Extract -->|payload.floatingip.floating_ip_address| RName[resource_name: 103.240.25.52]
+
+    ActUpdate --> Doc
+    ActAssoc --> Doc
+    ActDel --> Doc
+    ActCreate --> Doc
+    ActFallback --> Doc
+    ResFIP --> Doc
+    ResInst --> Doc
+    ResVol --> Doc
+    RID --> Doc
+    RName --> Doc
+```
 
 When notification_consumer receives `event_type = "floatingip.update.end"`, it classifies:
 
@@ -246,6 +306,36 @@ Returns `by_service`, `by_action_type`, `by_resource_type`, `by_status` with top
 ---
 
 ## 6. User/Project Name Resolution
+
+```mermaid
+sequenceDiagram
+    participant UI as Activity Log UI
+    participant API as FastAPI endpoint
+    participant OS as OpenSearch
+    participant Cache as _name_cache<br/>(in-memory)
+    participant KS as Keystone
+
+    UI->>API: GET /activity-log?limit=20
+    API->>OS: _search (filters + aggs)
+    OS-->>API: 20 hits (UUIDs only)
+
+    API->>API: Collect unique user_ids + tenant_ids
+    API->>Cache: Lookup uid/pid
+
+    alt Cache hit (< 10 min old)
+        Cache-->>API: return name
+    else Cache miss or expired
+        API->>KS: kc.users.list()
+        API->>KS: kc.projects.list()
+        KS-->>API: [Users], [Projects]
+        API->>Cache: Store (name, now) with 10min TTL
+        Cache-->>API: return name
+    end
+
+    API->>API: Decorate activities with user_name, project_name
+    API-->>UI: {activities, total, aggregations}
+    UI->>UI: Render table with resolved names
+```
 
 Raw OpenSearch docs only have UUIDs. Names are resolved at query time with **10-minute TTL in-memory cache**.
 
