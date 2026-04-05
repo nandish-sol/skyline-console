@@ -411,11 +411,35 @@ Here's how specific GUI actions end up in the Activity Log:
 | Create keypair | `POST /v2.1/os-keypairs` | `keypair.create.end` | `create` / `Key Pair` |
 | Create user | `POST /v3/users` | `identity.user.created` | `create` / `User` |
 
-**Two-record rule:** Most mutations produce TWO rows in Activity Log:
-1. HTTP access log row (has `http_url`, `http_status`, `client_ip`, `request_id`)
-2. Notification row (has `event_type`, `resource_name`, `message_id`)
+### Duplication Pattern — Important!
 
-The frontend deduplicates visually by showing rich notification data first, with HTTP context in `http_url`/`http_status` columns.
+**Yes, there is intentional duplication.** The two pipelines capture the same user action from different angles, producing **multiple OpenSearch documents per action**.
+
+**Real counts from production (2026-04-04):**
+| event_category | Count | Pipeline | What |
+|---|---|---|---|
+| `api_access` | 47,863 | Fluentd | ALL GET requests (reads) |
+| `api_action` | 257 | Fluentd | POST/PUT/DELETE (writes) |
+| `notification` | 293 | RabbitMQ consumer | oslo.messaging events |
+
+**For a single "create instance" action, you get ~6 docs:**
+```
+api_action  | POST /v2.1/servers                     (HTTP call)
+notification| compute.instance.create.start          (start marker)
+notification| compute.instance.create.end            (completion)
+notification| compute.instance.update × N            (state transitions: SCHEDULED, BUILDING, ACTIVE)
+notification| port.create.start + port.create.end    (network attach)
+```
+
+**Why not deduplicate?**
+- Each doc has **unique information** — HTTP has `client_ip`, `request_id`, URL/status; notification has `resource_name`, state transitions
+- Deduplication would require joining by `request_id` + `message_id` (no common key)
+- Different audit needs: SecOps wants every call (compliance); operators want state transitions
+
+**Current UI behavior:**
+- Shows all docs sorted by timestamp → users see the same action 4-6 times
+- Users can filter by `event_category` in OpenSearch directly, but the UI doesn't expose this filter yet
+- Future: add "Collapse related events" toggle that groups by (request_id, resource_id, time window)
 
 ---
 
