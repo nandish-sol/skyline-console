@@ -87,11 +87,20 @@ export class XloudAdjust extends ModalAction {
       const threads = parseInt(extraSpecs['hw:cpu_threads'] || '1', 10);
       const vcpuStep = threads > 1 ? threads : 1;
 
-      this.setState({
-        xloudStatus: status,
-        loading: false,
-        vcpuStep,
-      });
+      this.setState(
+        {
+          xloudStatus: status,
+          loading: false,
+          vcpuStep,
+        },
+        () => {
+          this.updateFormValue('current_vcpus', status[STATUS_CURRENT_VCPUS]);
+          this.updateFormValue(
+            'current_memory_gb',
+            mbToGb(status[STATUS_CURRENT_MEMORY])
+          );
+        }
+      );
     } catch (e) {
       // Fallback to flavor-based bounds
       const flavor = this.item.flavor_info || {};
@@ -113,11 +122,23 @@ export class XloudAdjust extends ModalAction {
         [STATUS_ATTACHED_DIMMS_MB]: 0,
         [STATUS_HAS_VIRTIOMEM]: false,
       };
-      this.setState({
-        xloudStatus: fallbackStatus,
-        loading: false,
-        fetchError: t('Could not fetch live status, using flavor defaults.'),
-      });
+      this.setState(
+        {
+          xloudStatus: fallbackStatus,
+          loading: false,
+          fetchError: t('Could not fetch live status, using flavor defaults.'),
+        },
+        () => {
+          this.updateFormValue(
+            'current_vcpus',
+            fallbackStatus[STATUS_CURRENT_VCPUS]
+          );
+          this.updateFormValue(
+            'current_memory_gb',
+            mbToGb(fallbackStatus[STATUS_CURRENT_MEMORY])
+          );
+        }
+      );
     }
   }
 
@@ -208,12 +229,15 @@ export class XloudAdjust extends ModalAction {
 
     const currentVcpus = xloudStatus[STATUS_CURRENT_VCPUS];
     const currentMemMb = xloudStatus[STATUS_CURRENT_MEMORY];
-    const maxVcpus = xloudStatus[STATUS_MAX_VCPUS];
-    const minVcpus = xloudStatus[STATUS_MIN_VCPUS];
-    const maxMemMb = xloudStatus[STATUS_MAX_MEMORY];
-    const minMemMb = xloudStatus[STATUS_MIN_MEMORY];
-    const maxMemGb = mbToGb(maxMemMb);
-    const minMemGb = mbToGb(minMemMb);
+    const rawMaxVcpus = xloudStatus[STATUS_MAX_VCPUS];
+    const rawMinVcpus = xloudStatus[STATUS_MIN_VCPUS];
+    const rawMaxMemMb = xloudStatus[STATUS_MAX_MEMORY];
+    const rawMinMemMb = xloudStatus[STATUS_MIN_MEMORY];
+    // Guard against swapped min/max values
+    const maxVcpus = Math.max(rawMaxVcpus, rawMinVcpus);
+    const minVcpus = Math.min(rawMaxVcpus, rawMinVcpus);
+    const maxMemGb = mbToGb(Math.max(rawMaxMemMb, rawMinMemMb));
+    const minMemGb = mbToGb(Math.min(rawMaxMemMb, rawMinMemMb));
 
     return [
       {
