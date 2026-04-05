@@ -14,7 +14,8 @@
 
 import React from 'react';
 import ImageType from 'components/ImageType';
-import { Tag, Tooltip } from 'antd';
+import { Tag, Tooltip, Popover } from 'antd';
+import { isHotaddEnabled, mbToGb } from 'resources/nova/xloud';
 import { ActionLogStore } from 'stores/nova/action-log';
 import { ironicOriginEndpoint } from 'client/client/constants';
 import { projectTagsColors } from 'src/utils/constants';
@@ -305,6 +306,151 @@ export const isIronicInstance = (item) => {
   return extra[':architecture'] === 'bare_metal';
 };
 
+// Properties shown in the Hot-Add section of the flavor popover.
+const HOTADD_KEYS = new Set(['minimum_cpu', 'minimum_memory']);
+
+const badgeStyle = {
+  display: 'inline-block',
+  padding: '2px 8px',
+  borderRadius: 3,
+  fontSize: 11,
+  fontWeight: 'bold',
+  margin: '2px 4px 2px 0',
+  whiteSpace: 'nowrap',
+  minWidth: 85,
+  textAlign: 'center',
+};
+
+const flavorPopoverContent = (flavorInfo) => {
+  if (!flavorInfo) return null;
+  const { vcpus, ram, disk = 0, extra_specs: extras = {} } = flavorInfo;
+  const hotadd = isHotaddEnabled(extras);
+  const minCpu = extras.minimum_cpu;
+  const minMemMb = extras.minimum_memory
+    ? parseInt(extras.minimum_memory, 10)
+    : null;
+  const otherSpecs = Object.entries(extras).filter(
+    ([k]) => !HOTADD_KEYS.has(k)
+  );
+  const thStyle = { padding: '4px 8px', background: '#fafafa', width: '35%' };
+  const tdStyle = { padding: '4px 8px', wordBreak: 'break-all' };
+  return (
+    <div style={{ maxWidth: 420, fontSize: 12 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr>
+            <th style={thStyle}>{t('VCPUs')}</th>
+            <td style={tdStyle}>{vcpus}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>{t('RAM')}</th>
+            <td style={tdStyle}>{mbToGb(ram)} GB</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>{t('Disk')}</th>
+            <td style={tdStyle}>{disk} GB</td>
+          </tr>
+          {hotadd && (
+            <>
+              <tr>
+                <th colSpan={2} style={{ ...thStyle, fontWeight: 'bold' }}>
+                  {t('Hot-Add Enabled')}
+                </th>
+              </tr>
+              <tr style={{ background: '#f6ffed' }}>
+                <th style={thStyle}>{t('vCPUs')}</th>
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      ...badgeStyle,
+                      background: '#faad14',
+                      color: '#333',
+                    }}
+                  >
+                    Min: {minCpu || '-'}
+                  </span>
+                  <span
+                    style={{
+                      ...badgeStyle,
+                      background: '#13c2c2',
+                      color: 'white',
+                    }}
+                  >
+                    Max: {vcpus}
+                  </span>
+                </td>
+              </tr>
+              <tr style={{ background: '#f6ffed' }}>
+                <th style={thStyle}>{t('Memory')}</th>
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      ...badgeStyle,
+                      background: '#faad14',
+                      color: '#333',
+                    }}
+                  >
+                    Min: {minMemMb ? `${mbToGb(minMemMb)} GB` : '-'}
+                  </span>
+                  <span
+                    style={{
+                      ...badgeStyle,
+                      background: '#13c2c2',
+                      color: 'white',
+                    }}
+                  >
+                    Max: {mbToGb(ram)} GB
+                  </span>
+                </td>
+              </tr>
+            </>
+          )}
+          {otherSpecs.length > 0 && (
+            <>
+              <tr>
+                <th colSpan={2} style={{ ...thStyle, fontWeight: 'bold' }}>
+                  {t('Additional Properties')}
+                </th>
+              </tr>
+              {otherSpecs.map(([k, v]) => (
+                <tr key={k}>
+                  <th style={thStyle}>
+                    <code style={{ fontSize: 11 }}>{k}</code>
+                  </th>
+                  <td style={tdStyle}>
+                    <code style={{ fontSize: 11 }}>{v}</code>
+                  </td>
+                </tr>
+              ))}
+            </>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export const flavorPopoverRender = (value, record) => {
+  const flavorInfo = record && record.flavor_info;
+  if (!flavorInfo) return value || '-';
+  const title = t('Flavor Details: {name}', {
+    name: flavorInfo.original_name || value,
+  });
+  return (
+    <Popover
+      title={title}
+      content={flavorPopoverContent(flavorInfo)}
+      trigger="hover"
+      placement="right"
+      overlayStyle={{ maxWidth: 440 }}
+    >
+      <span style={{ color: '#1890ff', cursor: 'pointer' }}>
+        {value || flavorInfo.original_name}
+      </span>
+    </Popover>
+  );
+};
+
 export const instanceColumnsBackend = [
   {
     title: t('Name'),
@@ -357,6 +503,7 @@ export const instanceColumnsBackend = [
     title: t('Flavor'),
     dataIndex: 'flavor',
     sorter: false,
+    render: (value, record) => flavorPopoverRender(value, record),
   },
   {
     title: t('Status'),
