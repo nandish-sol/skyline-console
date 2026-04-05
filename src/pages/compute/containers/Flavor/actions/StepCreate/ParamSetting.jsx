@@ -233,6 +233,67 @@ export class ParamSetting extends Base {
     },
   });
 
+  enableHotaddValidate = ({ getFieldValue }) => ({
+    validator(_rule, value) {
+      if (!value) {
+        return Promise.resolve();
+      }
+      const cpuPolicy = getFieldValue('cpuPolicy');
+      if (cpuPolicy === 'dedicated') {
+        return Promise.reject(
+          t(
+            'Hot-add cannot be enabled with dedicated CPU pinning. Choose one: enable hot-add OR use CPU pinning, not both.'
+          )
+        );
+      }
+      return Promise.resolve();
+    },
+  });
+
+  minCpuValidate = ({ getFieldValue }) => ({
+    validator(_rule, value) {
+      if (value === undefined || value === null || value === '') {
+        return Promise.resolve();
+      }
+      const maxVcpus = getFieldValue('vcpus');
+      const minVcpus = parseInt(value, 10);
+      if (Number.isNaN(minVcpus) || minVcpus < 1) {
+        return Promise.reject(t('Minimum vCPUs must be at least 1.'));
+      }
+      if (maxVcpus && minVcpus > parseInt(maxVcpus, 10)) {
+        return Promise.reject(
+          t(
+            'Minimum vCPUs ({min}) must be less than or equal to flavor vCPUs ({max}).',
+            { min: minVcpus, max: maxVcpus }
+          )
+        );
+      }
+      return Promise.resolve();
+    },
+  });
+
+  minMemoryValidate = ({ getFieldValue }) => ({
+    validator(_rule, value) {
+      if (value === undefined || value === null || value === '') {
+        return Promise.resolve();
+      }
+      const maxMemoryGb = getFieldValue('memoryGb');
+      const minMemoryGb = parseInt(value, 10);
+      if (Number.isNaN(minMemoryGb) || minMemoryGb < 1) {
+        return Promise.reject(t('Minimum Memory must be at least 1 GiB.'));
+      }
+      if (maxMemoryGb && minMemoryGb > parseInt(maxMemoryGb, 10)) {
+        return Promise.reject(
+          t(
+            'Minimum Memory ({min} GiB) must be less than or equal to flavor RAM ({max} GiB).',
+            { min: minMemoryGb, max: maxMemoryGb }
+          )
+        );
+      }
+      return Promise.resolve();
+    },
+  });
+
   pageSizeValueValidate = (rule, value) => {
     const r =
       /^[1-9]\d*(Kb\(it\)|Kib\(it\)|Mb\(it\)|Mib\(it\)|Gb\(it\)|Gib\(it\)|Tb\(it\)|Tib\(it\)|KB|KiB|MB|MiB|GB|GiB|TB|TiB)?$/;
@@ -379,12 +440,14 @@ export class ParamSetting extends Base {
         type: 'radio',
         optionType: 'default',
         hidden: isBareMetal,
+        dependencies: ['cpuPolicy'],
+        validator: this.enableHotaddValidate,
         options: [
           { label: t('Yes'), value: true },
           { label: t('No'), value: false },
         ],
         tip: t(
-          'Enable vCPU and memory hot-add for instances using this flavor. Allows adjusting resources without shutdown.'
+          'Enable vCPU and memory hot-add for instances using this flavor. Allows adjusting resources without shutdown. Incompatible with dedicated CPU pinning.'
         ),
       },
       {
@@ -394,8 +457,10 @@ export class ParamSetting extends Base {
         min: 1,
         hidden: !enableHotadd || isBareMetal,
         required: enableHotadd && !isBareMetal,
+        dependencies: ['vcpus'],
+        validator: this.minCpuValidate,
         tip: t(
-          'Minimum vCPU count at boot. Instances start with this many vCPUs and can scale up to the flavor max.'
+          'Minimum vCPU count at boot. Must be less than or equal to flavor vCPUs. Instances start with this many vCPUs and can scale up to the flavor max.'
         ),
       },
       {
@@ -405,8 +470,10 @@ export class ParamSetting extends Base {
         min: 1,
         hidden: !enableHotadd || isBareMetal,
         required: enableHotadd && !isBareMetal,
+        dependencies: ['memoryGb'],
+        validator: this.minMemoryValidate,
         tip: t(
-          'Minimum memory at boot in GiB. Instances start with this amount and can scale up to the flavor max.'
+          'Minimum memory at boot in GiB. Must be less than or equal to flavor RAM. Instances start with this amount and can scale up to the flavor max.'
         ),
       },
       {
