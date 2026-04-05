@@ -23,6 +23,7 @@ import {
   instanceStatusFilter,
   isIronicInstance,
   SimpleTag,
+  flavorPopoverRender,
 } from 'resources/nova/instance';
 import globalServerStore, { ServerStore } from 'stores/nova/instance';
 import { ServerGroupInstanceStore } from 'stores/skyline/server-group-instance';
@@ -182,10 +183,12 @@ export class Instance extends Base {
         dataIndex: 'flavor',
         sorter: false,
         isHideable: true,
-        render: (value, record) =>
-          isIronicInstance(record)
+        render: (value, record) => {
+          const displayValue = isIronicInstance(record)
             ? `${value}(${t('Ironic Instance')})`
-            : value,
+            : value;
+          return flavorPopoverRender(displayValue, record);
+        },
       },
       {
         title: t('Status'),
