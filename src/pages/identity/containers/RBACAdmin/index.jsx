@@ -14,6 +14,7 @@
 
 import React from 'react';
 import { observer, inject } from 'mobx-react';
+import { skylineBase } from 'client/client/constants';
 import {
   Table,
   Tabs,
@@ -152,7 +153,11 @@ function isSystemRole(name) {
 }
 
 async function apiFetch(url, options = {}) {
-  const resp = await fetch(url, {
+  // Route /api/v1/* through the skyline nginx proxy (same as license, health APIs)
+  const proxyUrl = url.startsWith('/api/v1/')
+    ? `${skylineBase()}${url.slice('/api/v1'.length)}`
+    : url;
+  const resp = await fetch(proxyUrl, {
     credentials: 'same-origin',
     ...options,
     headers: {
