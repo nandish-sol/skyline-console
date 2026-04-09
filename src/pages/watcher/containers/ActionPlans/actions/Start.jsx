@@ -16,6 +16,8 @@ export default class Start extends ConfirmAction {
 
   policy = 'watcher:action_plan:update';
 
+  getItemName = (data) => data.uuid || data.id || '-';
+
   allowedCheckFunc = (item) => item.state === 'RECOMMENDED';
 
   onSubmit = (item) => {

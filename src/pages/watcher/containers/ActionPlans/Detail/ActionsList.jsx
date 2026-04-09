@@ -71,18 +71,17 @@ export class ActionsList extends Base {
       render: (value, record) => {
         if (!value || Object.keys(value).length === 0) return '-';
         if (record.action_type === 'migrate') {
+          const vm =
+            value.resource_name ||
+            (value.resource_id ? value.resource_id.substring(0, 8) : 'unknown');
           const src = value.source_node || '-';
-          const dst = value.destination_node || '-';
-          const vm = value.resource_id
-            ? value.resource_id.substring(0, 8)
-            : '-';
-          return `${src} \u2192 ${dst} (VM: ${vm}...)`;
+          const dst = value.destination_node || 'auto';
+          return `${vm}: ${src} \u2192 ${dst}`;
         }
         if (record.action_type === 'change_nova_service_state') {
-          const host = value.resource_id
-            ? value.resource_id.substring(0, 8)
-            : '-';
-          return `${value.state || '-'} (${host}...)`;
+          const host = value.resource_name || value.resource_id || '-';
+          const state = value.state || '-';
+          return `${host}: ${state}`;
         }
         return JSON.stringify(value);
       },

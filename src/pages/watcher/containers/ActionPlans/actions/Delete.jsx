@@ -24,6 +24,8 @@ export default class Delete extends ConfirmAction {
 
   policy = 'watcher:action_plan:delete';
 
+  getItemName = (data) => data.uuid || data.id || '-';
+
   allowedCheckFunc = () => true;
 
   onSubmit = (item) => {
