@@ -175,7 +175,10 @@ export class Overview extends Component {
             type="primary"
             icon={<EditOutlined />}
             href="/user/settings"
-            style={{ background: '#197560', borderColor: '#197560' }}
+            style={{
+              background: 'var(--primary-color)',
+              borderColor: 'var(--primary-color)',
+            }}
           >
             {t('Edit Profile')}
           </Button>

@@ -35,7 +35,7 @@ export class ProjectInfo extends Component {
 
     const headerStyle = {
       background:
-        'linear-gradient(135deg, #0f4c3a 0%, #197560 50%, #2a9d8f 100%)',
+        'linear-gradient(135deg, #0f4c3a 0%, var(--primary-color) 50%, #2a9d8f 100%)',
       borderRadius: '8px 8px 0 0',
       padding: '24px',
     };

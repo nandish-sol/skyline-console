@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { inject, observer } from 'mobx-react';
+import { Prompt } from 'react-router-dom';
 import {
   Layout,
   Tabs,
@@ -11,13 +12,16 @@ import {
   Tooltip,
   Row,
   Col,
-  Spin,
+  Skeleton,
+  Alert,
 } from 'antd';
 import {
   SaveOutlined,
   InfoCircleOutlined,
   CameraOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
+import moment from 'moment';
 import globalUserStore from 'stores/keystone/user';
 import client from 'client';
 import ProfileImageModal from '../UserCenter/ProfileImageModal';
@@ -101,13 +105,58 @@ export class ProfileSettings extends Component {
       savingPassword: false,
       imageModalVisible: false,
       selectedTheme: null,
+      savedTheme: null,
       profileImageSrc: null,
+      profileDirty: false,
+      profileSavedAt: null,
+      themeSavedAt: null,
     };
+    this.profileFormRef = React.createRef();
   }
 
   componentDidMount() {
     this.fetchAll();
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
   }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+  }
+
+  handleBeforeUnload = (e) => {
+    if (this.isDirty()) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+
+  handleKeyDown = (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      if (this.profileFormRef.current && this.state.profileDirty) {
+        this.profileFormRef.current.submit();
+      }
+    }
+    if (e.key === 'Escape' && this.state.profileDirty) {
+      this.handleResetProfile();
+    }
+  };
+
+  handleResetProfile = () => {
+    if (this.profileFormRef.current) {
+      this.profileFormRef.current.resetFields();
+      this.setState({ profileDirty: false });
+    }
+  };
+
+  handleProfileValuesChange = () => {
+    this.setState((prev) =>
+      prev.profileDirty ? null : { profileDirty: true }
+    );
+  };
 
   get userId() {
     const {
@@ -115,6 +164,11 @@ export class ProfileSettings extends Component {
     } = this.props.rootStore;
     return user.id;
   }
+
+  isDirty = () => {
+    const { profileDirty, selectedTheme, savedTheme } = this.state;
+    return profileDirty || (savedTheme && selectedTheme !== savedTheme);
+  };
 
   fetchAll = async () => {
     this.setState({ loading: true });
@@ -131,11 +185,14 @@ export class ProfileSettings extends Component {
         const fmt = imgData.image_format || 'png';
         profileImageSrc = `data:image/${fmt};base64,${imgData.profile_image_base64}`;
       }
+      const initialTheme = (meData && meData.theme_color) || '#197560';
       this.setState({
         keystoneDetail: detail || {},
         me: meData || {},
-        selectedTheme: (meData && meData.theme_color) || '#197560',
+        selectedTheme: initialTheme,
+        savedTheme: initialTheme,
         profileImageSrc,
+        profileDirty: false,
         loading: false,
       });
     } catch (e) {
@@ -147,16 +204,22 @@ export class ProfileSettings extends Component {
   handleProfileSubmit = async (values) => {
     this.setState({ saving: true });
     try {
-      await client.skyline.profileMeUpdate(values);
+      const resp = await client.skyline.profileMeUpdate(values);
+      const meData = resp && resp.data ? resp.data : resp;
       message.success(t('Profile updated successfully'));
-      await this.fetchAll();
+      this.setState((prev) => ({
+        me: meData || { ...prev.me, ...values },
+        profileDirty: false,
+        profileSavedAt: Date.now(),
+        saving: false,
+      }));
     } catch (e) {
       const detail =
         (e && e.response && e.response.data && e.response.data.detail) ||
         t('Failed to update profile');
       message.error(detail);
+      this.setState({ saving: false });
     }
-    this.setState({ saving: false });
   };
 
   handleThemeSave = async () => {
@@ -169,14 +232,18 @@ export class ProfileSettings extends Component {
         selectedTheme
       );
       message.success(t('Theme color saved.'));
-      await this.fetchAll();
+      this.setState({
+        savedTheme: selectedTheme,
+        themeSavedAt: Date.now(),
+        saving: false,
+      });
     } catch (e) {
       const detail =
         (e && e.response && e.response.data && e.response.data.detail) ||
         t('Failed to save theme color');
       message.error(detail);
+      this.setState({ saving: false });
     }
-    this.setState({ saving: false });
   };
 
   handlePasswordSubmit = async (values) => {
@@ -204,8 +271,43 @@ export class ProfileSettings extends Component {
     this.setState({ profileImageSrc: dataUri, imageModalVisible: false });
   };
 
+  renderSecurityBanner() {
+    const { keystoneDetail } = this.state;
+    const lastActive = keystoneDetail.last_active_at;
+    const pwExpires = keystoneDetail.password_expires_at;
+    const items = [];
+    if (lastActive) {
+      items.push(
+        `${t('Last activity')}: ${moment.utc(lastActive).local().fromNow()}`
+      );
+    }
+    if (pwExpires) {
+      const days = moment.utc(pwExpires).diff(moment(), 'days');
+      if (days >= 0) {
+        items.push(
+          days === 0
+            ? t('Password expires today')
+            : `${t('Password expires in')} ${days} ${t('days')}`
+        );
+      } else {
+        items.push(t('Password expired — please change it'));
+      }
+    }
+    if (items.length === 0) return null;
+    return (
+      <Alert
+        type="info"
+        showIcon
+        icon={<ClockCircleOutlined />}
+        message={items.join(' · ')}
+        style={{ marginBottom: 16 }}
+      />
+    );
+  }
+
   renderProfileTab() {
-    const { keystoneDetail, me, saving, profileImageSrc } = this.state;
+    const { keystoneDetail, me, saving, profileImageSrc, profileSavedAt } =
+      this.state;
     const initial = {
       first_name: (me && me.first_name) || '',
       last_name: (me && me.last_name) || '',
@@ -218,8 +320,11 @@ export class ProfileSettings extends Component {
         layout="vertical"
         initialValues={initial}
         onFinish={this.handleProfileSubmit}
+        onValuesChange={this.handleProfileValuesChange}
+        ref={this.profileFormRef}
         key={`${this.userId}-${me ? me.updated_at || '' : ''}`}
       >
+        {this.renderSecurityBanner()}
         <Row gutter={24} style={{ marginBottom: 24 }}>
           <Col flex="140px">
             <div
@@ -323,17 +428,37 @@ export class ProfileSettings extends Component {
             htmlType="submit"
             icon={<SaveOutlined />}
             loading={saving}
-            style={{ background: '#197560', borderColor: '#197560' }}
+            disabled={!this.state.profileDirty}
+            style={{
+              background: 'var(--primary-color)',
+              borderColor: 'var(--primary-color)',
+            }}
           >
             {t('Save Changes')}
           </Button>
+          <Button
+            onClick={this.handleResetProfile}
+            disabled={!this.state.profileDirty || saving}
+            style={{ marginLeft: 8 }}
+          >
+            {t('Discard')}
+          </Button>
+          {profileSavedAt && !this.state.profileDirty && (
+            <span style={{ marginLeft: 12, color: '#8c8c8c', fontSize: 12 }}>
+              {t('Saved')} {moment(profileSavedAt).fromNow()}
+            </span>
+          )}
+          <span style={{ marginLeft: 12, color: '#bbb', fontSize: 12 }}>
+            {t('Tip: Ctrl/Cmd+S to save, Esc to discard')}
+          </span>
         </div>
       </Form>
     );
   }
 
   renderAppearanceTab() {
-    const { selectedTheme, saving } = this.state;
+    const { selectedTheme, savedTheme, saving, themeSavedAt } = this.state;
+    const themeDirty = savedTheme && selectedTheme !== savedTheme;
     return (
       <div>
         <h3 style={{ marginBottom: 12 }}>{t('Theme Color')}</h3>
@@ -362,11 +487,24 @@ export class ProfileSettings extends Component {
             type="primary"
             icon={<SaveOutlined />}
             loading={saving}
+            disabled={!themeDirty}
             onClick={this.handleThemeSave}
             style={{ background: selectedTheme, borderColor: selectedTheme }}
           >
             {t('Save Theme')}
           </Button>
+          <Button
+            onClick={() => this.setState({ selectedTheme: savedTheme })}
+            disabled={!themeDirty || saving}
+            style={{ marginLeft: 8 }}
+          >
+            {t('Revert')}
+          </Button>
+          {themeSavedAt && !themeDirty && (
+            <span style={{ marginLeft: 12, color: '#8c8c8c', fontSize: 12 }}>
+              {t('Saved')} {moment(themeSavedAt).fromNow()}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -419,7 +557,10 @@ export class ProfileSettings extends Component {
             htmlType="submit"
             icon={<SaveOutlined />}
             loading={savingPassword}
-            style={{ background: '#197560', borderColor: '#197560' }}
+            style={{
+              background: 'var(--primary-color)',
+              borderColor: 'var(--primary-color)',
+            }}
           >
             {t('Change Password')}
           </Button>
@@ -432,10 +573,16 @@ export class ProfileSettings extends Component {
     const { loading, imageModalVisible, profileImageSrc } = this.state;
     return (
       <Layout.Content style={styles.content}>
+        <Prompt
+          when={this.isDirty()}
+          message={t(
+            'You have unsaved changes. Are you sure you want to leave this page?'
+          )}
+        />
         <Card style={styles.card}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 60 }}>
-              <Spin size="large" />
+            <div style={{ padding: 24 }}>
+              <Skeleton active avatar paragraph={{ rows: 6 }} />
             </div>
           ) : (
             <Tabs defaultActiveKey="profile">

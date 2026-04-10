@@ -190,7 +190,10 @@ export default class ProfileImageModal extends Component {
             loading={saving}
             disabled={!canSave || removing}
             onClick={this.handleSave}
-            style={{ background: '#197560', borderColor: '#197560' }}
+            style={{
+              background: 'var(--primary-color)',
+              borderColor: 'var(--primary-color)',
+            }}
           >
             {t('Save')}
           </Button>,
