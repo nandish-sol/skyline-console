@@ -103,6 +103,15 @@ export class SkylineClient extends Base {
             key: 'profile',
           },
           {
+            name: 'profileImage',
+            key: 'profile/image',
+          },
+          {
+            name: 'profileImageUpload',
+            key: 'profile/image',
+            method: 'put',
+          },
+          {
             name: 'switchProject',
             method: 'post',
             generate: (projectId, domainId) => {
@@ -138,15 +147,6 @@ export class SkylineClient extends Base {
       },
       {
         key: 'sso',
-      },
-      {
-        key: 'profile',
-        isResource: false,
-        extendOperations: [
-          {
-            key: 'image',
-          },
-        ],
       },
     ];
   }

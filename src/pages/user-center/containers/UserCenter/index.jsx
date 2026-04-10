@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import { inject, observer } from 'mobx-react';
 import { Layout, Tag, Button } from 'antd';
-import { UserOutlined, EditOutlined } from '@ant-design/icons';
+import { UserOutlined, EditOutlined, CameraOutlined } from '@ant-design/icons';
 import globalUserStore from 'stores/keystone/user';
+import client from 'client';
+import ProfileImageModal from './ProfileImageModal';
 import styles from './styles.less';
 
 export class Overview extends Component {
@@ -10,11 +12,14 @@ export class Overview extends Component {
     super(props);
     this.state = {
       detail: {},
+      profileImageSrc: null,
+      imageModalVisible: false,
     };
   }
 
   componentDidMount() {
     this.fetchData();
+    this.fetchProfileImage();
   }
 
   get roles() {
@@ -32,24 +37,71 @@ export class Overview extends Component {
     return id || '-';
   }
 
-  async fetchData() {
+  fetchData = async () => {
     const {
       user: { user },
     } = this.props.rootStore;
     const detail = await globalUserStore.pureFetchDetail({ id: user.id });
     this.setState({ detail });
-  }
+  };
+
+  fetchProfileImage = async () => {
+    try {
+      const data = await client.skyline.profileImage();
+      if (data && data.profile_image_base64) {
+        const format = data.image_format || 'png';
+        this.setState({
+          profileImageSrc: `data:image/${format};base64,${data.profile_image_base64}`,
+        });
+      }
+    } catch (e) {
+      // silently fail -- placeholder icon will show
+    }
+  };
+
+  openImageModal = () => {
+    this.setState({ imageModalVisible: true });
+  };
+
+  closeImageModal = () => {
+    this.setState({ imageModalVisible: false });
+  };
+
+  handleImageUploadSuccess = ({ dataUri }) => {
+    this.setState({
+      profileImageSrc: dataUri,
+      imageModalVisible: false,
+    });
+  };
 
   renderHeader() {
-    const { detail = {} } = this.state;
+    const { detail = {}, profileImageSrc } = this.state;
     const name = detail.name || '-';
     const email = detail.email || '';
 
     return (
       <div className={styles['header-card']}>
         <div className={styles['header-content']}>
-          <div className={styles.avatar}>
-            <UserOutlined />
+          <div
+            className={styles.avatar}
+            onClick={this.openImageModal}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') this.openImageModal();
+            }}
+            role="button"
+            tabIndex={0}
+            title={t('Click to change profile image')}
+          >
+            {profileImageSrc ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <img src={profileImageSrc} className={styles['avatar-img']} />
+            ) : (
+              <UserOutlined />
+            )}
+            <div className={styles['avatar-overlay']}>
+              <CameraOutlined />
+              <span>{t('Change')}</span>
+            </div>
           </div>
           <div className={styles['header-info']}>
             <h2>{name}</h2>
@@ -158,11 +210,18 @@ export class Overview extends Component {
   }
 
   render() {
+    const { imageModalVisible, profileImageSrc } = this.state;
     return (
       <Layout.Content className={styles.content}>
         {this.renderHeader()}
         {this.renderStats()}
         {this.renderInfoSection()}
+        <ProfileImageModal
+          visible={imageModalVisible}
+          currentImageSrc={profileImageSrc}
+          onCancel={this.closeImageModal}
+          onSuccess={this.handleImageUploadSuccess}
+        />
       </Layout.Content>
     );
   }

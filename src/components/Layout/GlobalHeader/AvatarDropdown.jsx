@@ -18,7 +18,7 @@ import { Menu, Spin, Button, Select, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import i18n from 'core/i18n';
 import ItemActionButtons from 'components/Tables/Base/ItemActionButtons';
-import { skylineBase } from 'client/client/constants';
+import client from 'client';
 import Password from './Password';
 import Token from './Token';
 import OpenRc from './OpenRc';
@@ -52,18 +52,12 @@ export class AvatarDropdown extends React.Component {
 
   fetchProfileImage = async () => {
     try {
-      const baseUrl = skylineBase();
-      const response = await fetch(`${baseUrl}/profile/image`, {
-        credentials: 'same-origin',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.profile_image_base64) {
-          const format = data.image_format || 'png';
-          this.setState({
-            profileImageSrc: `data:image/${format};base64,${data.profile_image_base64}`,
-          });
-        }
+      const data = await client.skyline.profileImage();
+      if (data && data.profile_image_base64) {
+        const format = data.image_format || 'png';
+        this.setState({
+          profileImageSrc: `data:image/${format};base64,${data.profile_image_base64}`,
+        });
       }
     } catch (e) {
       // silently fail - will show default icon

@@ -22,16 +22,57 @@
 }
 
 .avatar {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 80px;
   height: 80px;
+  overflow: hidden;
   color: #fff;
   font-size: 36px;
   background: rgba(255, 255, 255, 20%);
   border-radius: 50%;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 40%);
+
+    .avatar-overlay {
+      opacity: 1;
+    }
+  }
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 55%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+
+  :global(.anticon) {
+    margin-bottom: 2px;
+    font-size: 20px;
+  }
 }
 
 .header-info {
