@@ -31,7 +31,7 @@ export class InstancePCIStore extends Base {
   getFatherResourceId = (params) => params.serverId;
 
   get listResponseKey() {
-    return 'pciDeviceAttachments';
+    return 'pci_devices';
   }
 
   get paramsFunc() {

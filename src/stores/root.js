@@ -119,7 +119,6 @@ export class RootStore {
       const { roles = [] } = result;
       return roles.some((it) => it.name === 'admin' || it.name === 'reader');
     } catch (e) {
-      console.log(e);
       return false;
     }
   }

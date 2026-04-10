@@ -28,7 +28,6 @@ const insertRouteMap = (record = {}) => {
 
 export const setRouteMap = (routes = []) => {
   routes.forEach((r) => insertRouteMap(r));
-  console.log('routeMap', routeMap);
   return routeMap;
 };
 

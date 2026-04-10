@@ -168,7 +168,8 @@ class ActivityLog extends Component {
         actionTypeOptions: (result && result.action_types) || [],
       });
     } catch (e) {
-      // Silently fail
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch activity log filter options', e);
     }
   };
 
