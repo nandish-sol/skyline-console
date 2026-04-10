@@ -37,6 +37,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import client from 'client';
+import ExportButton from './ExportButton';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -557,7 +558,7 @@ class ActivityLog extends Component {
               onChange={this.handleDateRange}
             />
           </Col>
-          <Col span={4}>
+          <Col span={3}>
             <Input
               placeholder="Search URL/ID..."
               prefix={<SearchOutlined />}
@@ -571,18 +572,31 @@ class ActivityLog extends Component {
               onPressEnter={this.fetchData}
             />
           </Col>
-          <Col span={4}>
+          <Col
+            span={5}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'nowrap',
+              whiteSpace: 'nowrap',
+            }}
+          >
             <Button
               type="primary"
               icon={<SyncOutlined />}
               onClick={this.fetchData}
-              style={{ marginRight: 8 }}
             >
               Refresh
             </Button>
             <Button icon={<ClearOutlined />} onClick={this.clearFilters}>
               Clear
             </Button>
+            <ExportButton
+              getCurrentRows={() => this.state.activities}
+              getFilters={() => this.state.filters}
+              getTotal={() => this.state.total}
+            />
           </Col>
         </Row>
       </Card>
