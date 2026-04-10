@@ -126,6 +126,10 @@ export class SkylineClient extends Base {
             method: 'patch',
           },
           {
+            name: 'profileSessions',
+            key: 'profile/sessions',
+          },
+          {
             name: 'switchProject',
             method: 'post',
             generate: (projectId, domainId) => {

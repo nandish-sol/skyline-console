@@ -14,12 +14,17 @@ import {
   Col,
   Skeleton,
   Alert,
+  List,
+  Tag,
+  Empty,
 } from 'antd';
 import {
   SaveOutlined,
   InfoCircleOutlined,
   CameraOutlined,
   ClockCircleOutlined,
+  DesktopOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import moment from 'moment';
 import globalUserStore from 'stores/keystone/user';
@@ -110,12 +115,16 @@ export class ProfileSettings extends Component {
       profileDirty: false,
       profileSavedAt: null,
       themeSavedAt: null,
+      sessions: [],
+      sessionsLoading: false,
+      lastLoginAt: null,
     };
     this.profileFormRef = React.createRef();
   }
 
   componentDidMount() {
     this.fetchAll();
+    this.fetchSessions();
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('beforeunload', this.handleBeforeUnload);
   }
@@ -168,6 +177,21 @@ export class ProfileSettings extends Component {
   isDirty = () => {
     const { profileDirty, selectedTheme, savedTheme } = this.state;
     return profileDirty || (savedTheme && selectedTheme !== savedTheme);
+  };
+
+  fetchSessions = async () => {
+    this.setState({ sessionsLoading: true });
+    try {
+      const resp = await client.skyline.profileSessions();
+      const data = resp && resp.data ? resp.data : resp;
+      this.setState({
+        sessions: (data && data.sessions) || [],
+        lastLoginAt: data && data.last_login_at,
+        sessionsLoading: false,
+      });
+    } catch (e) {
+      this.setState({ sessionsLoading: false });
+    }
   };
 
   fetchAll = async () => {
@@ -510,62 +534,146 @@ export class ProfileSettings extends Component {
     );
   }
 
+  renderSessionsCard() {
+    const { sessions, sessionsLoading, lastLoginAt } = this.state;
+    const others = sessions.filter((s) => !s.is_current && !s.revoked);
+    const prevLogin = others.length ? others[0].created_at : null;
+    const activeSessions = sessions.filter((s) => !s.revoked).slice(0, 10);
+    return (
+      <Card
+        size="small"
+        title={
+          <span>
+            <DesktopOutlined style={{ marginRight: 8 }} />
+            {t('Sign-in activity')}
+          </span>
+        }
+        style={{ marginBottom: 16 }}
+        loading={sessionsLoading}
+      >
+        <div style={{ marginBottom: 12, color: '#666' }}>
+          {lastLoginAt && (
+            <span>
+              {t('Current session started')}{' '}
+              <strong>{moment.utc(lastLoginAt).local().fromNow()}</strong>
+              {' · '}
+            </span>
+          )}
+          {prevLogin ? (
+            <span>
+              {t('Previous sign-in')}{' '}
+              <strong>{moment.utc(prevLogin).local().fromNow()}</strong>
+            </span>
+          ) : (
+            <span>{t('No previous sign-in recorded')}</span>
+          )}
+        </div>
+        {activeSessions.length === 0 ? (
+          <Empty
+            description={t('No active sessions recorded yet')}
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <List
+            size="small"
+            dataSource={activeSessions}
+            renderItem={(s) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={<GlobalOutlined style={{ fontSize: 18 }} />}
+                  title={
+                    <span>
+                      {s.ip_address || t('Unknown IP')}{' '}
+                      {s.is_current && (
+                        <Tag color="green" style={{ marginLeft: 6 }}>
+                          {t('This session')}
+                        </Tag>
+                      )}
+                    </span>
+                  }
+                  description={
+                    <span style={{ fontSize: 11, color: '#999' }}>
+                      {(s.user_agent || '').slice(0, 80)}
+                      {' · '}
+                      {t('Signed in')}{' '}
+                      {moment.utc(s.created_at).local().fromNow()}
+                      {s.expires_at && (
+                        <>
+                          {' · '}
+                          {t('Expires')}{' '}
+                          {moment.utc(s.expires_at).local().fromNow()}
+                        </>
+                      )}
+                    </span>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Card>
+    );
+  }
+
   renderPasswordTab() {
     const { savingPassword } = this.state;
     return (
-      <Form layout="vertical" onFinish={this.handlePasswordSubmit}>
-        <Form.Item
-          label={t('Current Password')}
-          name="current_password"
-          rules={[
-            { required: true, message: t('Please enter current password') },
-          ]}
-        >
-          <Input.Password />
-        </Form.Item>
-        <Form.Item
-          label={t('New Password')}
-          name="new_password"
-          rules={[
-            { required: true, message: t('Please enter new password') },
-            { min: 8, message: t('Password must be at least 8 characters') },
-          ]}
-        >
-          <Input.Password />
-        </Form.Item>
-        <Form.Item
-          label={t('Confirm New Password')}
-          name="confirm_password"
-          dependencies={['new_password']}
-          rules={[
-            { required: true, message: t('Please confirm new password') },
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                if (!value || getFieldValue('new_password') === value) {
-                  return Promise.resolve();
-                }
-                return Promise.reject(new Error(t('Passwords do not match')));
-              },
-            }),
-          ]}
-        >
-          <Input.Password />
-        </Form.Item>
-        <div style={styles.formActions}>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<SaveOutlined />}
-            loading={savingPassword}
-            style={{
-              background: 'var(--primary-color)',
-              borderColor: 'var(--primary-color)',
-            }}
+      <div>
+        {this.renderSessionsCard()}
+        <Form layout="vertical" onFinish={this.handlePasswordSubmit}>
+          <Form.Item
+            label={t('Current Password')}
+            name="current_password"
+            rules={[
+              { required: true, message: t('Please enter current password') },
+            ]}
           >
-            {t('Change Password')}
-          </Button>
-        </div>
-      </Form>
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            label={t('New Password')}
+            name="new_password"
+            rules={[
+              { required: true, message: t('Please enter new password') },
+              { min: 8, message: t('Password must be at least 8 characters') },
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            label={t('Confirm New Password')}
+            name="confirm_password"
+            dependencies={['new_password']}
+            rules={[
+              { required: true, message: t('Please confirm new password') },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('new_password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error(t('Passwords do not match')));
+                },
+              }),
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <div style={styles.formActions}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={savingPassword}
+              style={{
+                background: 'var(--primary-color)',
+                borderColor: 'var(--primary-color)',
+              }}
+            >
+              {t('Change Password')}
+            </Button>
+          </div>
+        </Form>
+      </div>
     );
   }
 
