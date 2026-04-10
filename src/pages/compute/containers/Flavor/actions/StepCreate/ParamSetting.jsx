@@ -233,66 +233,77 @@ export class ParamSetting extends Base {
     },
   });
 
-  enableHotaddValidate = ({ getFieldValue }) => ({
-    validator(_rule, value) {
-      if (!value) {
-        return Promise.resolve();
-      }
-      const cpuPolicy = getFieldValue('cpuPolicy');
-      if (cpuPolicy === 'dedicated') {
-        return Promise.reject(
+  enableHotaddValidate = (_rule, value) => {
+    if (!value) {
+      return Promise.resolve();
+    }
+    const cpuPolicy =
+      this.formRef.current && this.formRef.current.getFieldValue
+        ? this.formRef.current.getFieldValue('cpuPolicy')
+        : undefined;
+    if (cpuPolicy === 'dedicated') {
+      return Promise.reject(
+        new Error(
           t(
             'Hot-add cannot be enabled with dedicated CPU pinning. Choose one: enable hot-add OR use CPU pinning, not both.'
           )
-        );
-      }
-      return Promise.resolve();
-    },
-  });
+        )
+      );
+    }
+    return Promise.resolve();
+  };
 
-  minCpuValidate = ({ getFieldValue }) => ({
-    validator(_rule, value) {
-      if (value === undefined || value === null || value === '') {
-        return Promise.resolve();
-      }
-      const maxVcpus = getFieldValue('vcpus');
-      const minVcpus = parseInt(value, 10);
-      if (Number.isNaN(minVcpus) || minVcpus < 1) {
-        return Promise.reject(t('Minimum vCPUs must be at least 1.'));
-      }
-      if (maxVcpus && minVcpus > parseInt(maxVcpus, 10)) {
-        return Promise.reject(
+  minCpuValidate = (_rule, value) => {
+    if (value === undefined || value === null || value === '') {
+      return Promise.resolve();
+    }
+    const maxVcpus =
+      this.formRef.current && this.formRef.current.getFieldValue
+        ? this.formRef.current.getFieldValue('vcpus')
+        : undefined;
+    const minVcpus = parseInt(value, 10);
+    if (Number.isNaN(minVcpus) || minVcpus < 1) {
+      return Promise.reject(new Error(t('Minimum vCPUs must be at least 1.')));
+    }
+    if (maxVcpus && minVcpus > parseInt(maxVcpus, 10)) {
+      return Promise.reject(
+        new Error(
           t(
             'Minimum vCPUs ({min}) must be less than or equal to flavor vCPUs ({max}).',
             { min: minVcpus, max: maxVcpus }
           )
-        );
-      }
-      return Promise.resolve();
-    },
-  });
+        )
+      );
+    }
+    return Promise.resolve();
+  };
 
-  minMemoryValidate = ({ getFieldValue }) => ({
-    validator(_rule, value) {
-      if (value === undefined || value === null || value === '') {
-        return Promise.resolve();
-      }
-      const maxMemoryGb = getFieldValue('memoryGb');
-      const minMemoryGb = parseInt(value, 10);
-      if (Number.isNaN(minMemoryGb) || minMemoryGb < 1) {
-        return Promise.reject(t('Minimum Memory must be at least 1 GiB.'));
-      }
-      if (maxMemoryGb && minMemoryGb > parseInt(maxMemoryGb, 10)) {
-        return Promise.reject(
+  minMemoryValidate = (_rule, value) => {
+    if (value === undefined || value === null || value === '') {
+      return Promise.resolve();
+    }
+    const maxMemoryGb =
+      this.formRef.current && this.formRef.current.getFieldValue
+        ? this.formRef.current.getFieldValue('memoryGb')
+        : undefined;
+    const minMemoryGb = parseInt(value, 10);
+    if (Number.isNaN(minMemoryGb) || minMemoryGb < 1) {
+      return Promise.reject(
+        new Error(t('Minimum Memory must be at least 1 GiB.'))
+      );
+    }
+    if (maxMemoryGb && minMemoryGb > parseInt(maxMemoryGb, 10)) {
+      return Promise.reject(
+        new Error(
           t(
             'Minimum Memory ({min} GiB) must be less than or equal to flavor RAM ({max} GiB).',
             { min: minMemoryGb, max: maxMemoryGb }
           )
-        );
-      }
-      return Promise.resolve();
-    },
-  });
+        )
+      );
+    }
+    return Promise.resolve();
+  };
 
   pageSizeValueValidate = (rule, value) => {
     const r =
