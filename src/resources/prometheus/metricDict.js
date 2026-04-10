@@ -110,6 +110,9 @@ const metricDict = {
     },
   },
   physicalNode: {
+    serverModel: {
+      url: ['node_dmi_info'],
+    },
     cpuCores: {
       url: ['node_cpu_seconds_total'],
       finalFormatFunc: [(url) => `count(${url}) by (cpu)`],

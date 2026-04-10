@@ -26,8 +26,30 @@ import styles from 'components/PrometheusChart/component/styles.less';
 
 export const topCardList = [
   {
-    title: t('CPU Cores'),
+    title: t('Server Model'),
     span: 5,
+    createFetchParams: {
+      metricKey: 'physicalNode.serverModel',
+    },
+    handleDataParams: {
+      typeKey: 'product_name',
+    },
+    renderContent: (value) => {
+      const model = get(value.data, '[0].type', '') || '-';
+      return (
+        <div
+          className={styles['top-content']}
+          style={{ fontSize: 16, fontWeight: 500 }}
+          title={model}
+        >
+          {model}
+        </div>
+      );
+    },
+  },
+  {
+    title: t('CPU Cores'),
+    span: 4,
     createFetchParams: {
       metricKey: 'physicalNode.cpuCores',
     },
@@ -39,7 +61,7 @@ export const topCardList = [
   },
   {
     title: t('Total Ram'),
-    span: 5,
+    span: 4,
     createFetchParams: {
       metricKey: 'physicalNode.totalMem',
     },
@@ -51,7 +73,7 @@ export const topCardList = [
   },
   {
     title: t('System Running Time'),
-    span: 5,
+    span: 4,
     createFetchParams: {
       metricKey: 'physicalNode.systemRunningTime',
     },
@@ -67,7 +89,7 @@ export const topCardList = [
   },
   {
     title: t('File System Used Space'),
-    span: 9,
+    span: 7,
     createFetchParams: {
       metricKey: 'physicalNode.fileSystemFreeSpace',
     },
