@@ -47,8 +47,21 @@ export default class ProfileImageModal extends Component {
       compressed: null,
       loading: false,
       saving: false,
+      removing: false,
       dirty: false,
+      removedInSession: false,
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (
+      prevProps.currentImageSrc !== this.props.currentImageSrc &&
+      !this.state.dirty &&
+      !this.state.compressed
+    ) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ previewDataUri: this.props.currentImageSrc || null });
+    }
   }
 
   handleBeforeUpload = async (file) => {
@@ -106,11 +119,46 @@ export default class ProfileImageModal extends Component {
     });
   };
 
+  handleRemoveSaved = async () => {
+    this.setState({ removing: true });
+    try {
+      await client.skyline.profileImageDelete();
+      message.success(t('Profile image removed.'));
+      this.setState({
+        previewDataUri: null,
+        compressed: null,
+        dirty: false,
+        removedInSession: true,
+        removing: false,
+      });
+      if (this.props.onSuccess) {
+        this.props.onSuccess({ dataUri: null, response: null });
+      }
+    } catch (e) {
+      const detail =
+        (e && e.response && e.response.data && e.response.data.detail) ||
+        (e && e.message) ||
+        t('Failed to remove profile image.');
+      message.error(detail);
+      this.setState({ removing: false });
+    }
+  };
+
   render() {
     const { visible, onCancel } = this.props;
-    const { previewDataUri, loading, saving, compressed, dirty } = this.state;
+    const {
+      previewDataUri,
+      loading,
+      saving,
+      removing,
+      compressed,
+      dirty,
+      removedInSession,
+    } = this.state;
 
     const canSave = !!compressed && dirty;
+    const busy = saving || removing;
+    const hasServerImage = !!this.props.currentImageSrc && !removedInSession;
 
     return (
       <Modal
@@ -118,17 +166,29 @@ export default class ProfileImageModal extends Component {
         open={visible}
         title={t('Change Profile Image')}
         onCancel={onCancel}
-        maskClosable={!saving}
-        closable={!saving}
+        maskClosable={!busy}
+        closable={!busy}
         footer={[
-          <Button key="cancel" onClick={onCancel} disabled={saving}>
+          hasServerImage && (
+            <Button
+              key="remove"
+              danger
+              icon={<DeleteOutlined />}
+              loading={removing}
+              disabled={saving}
+              onClick={this.handleRemoveSaved}
+            >
+              {t('Remove')}
+            </Button>
+          ),
+          <Button key="cancel" onClick={onCancel} disabled={busy}>
             {t('Cancel')}
           </Button>,
           <Button
             key="save"
             type="primary"
             loading={saving}
-            disabled={!canSave}
+            disabled={!canSave || removing}
             onClick={this.handleSave}
             style={{ background: '#197560', borderColor: '#197560' }}
           >
@@ -170,15 +230,14 @@ export default class ProfileImageModal extends Component {
               showUploadList={false}
               beforeUpload={this.handleBeforeUpload}
             >
-              <Button icon={<UploadOutlined />} disabled={saving}>
+              <Button icon={<UploadOutlined />} disabled={busy}>
                 {t('Choose Image')}
               </Button>
             </Upload>
-            {previewDataUri && (
+            {previewDataUri && compressed && (
               <Button
-                icon={<DeleteOutlined />}
                 onClick={this.handleClearPreview}
-                disabled={saving}
+                disabled={busy}
                 style={{ marginLeft: 8 }}
               >
                 {t('Clear')}
