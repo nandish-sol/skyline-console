@@ -1,49 +1,71 @@
 import React, { Component } from 'react';
-import { Modal, Upload, Button, message, Spin } from 'antd';
-import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Modal, Upload, Button, Slider, message, Spin } from 'antd';
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  ScissorOutlined,
+} from '@ant-design/icons';
+import Cropper from 'react-easy-crop';
 import client from 'client';
 
-const MAX_DIMENSION = 256;
-const JPEG_QUALITY = 0.75;
-const MAX_OUTPUT_BYTES = 150 * 1024;
+const OUTPUT_DIMENSION = 256;
+const JPEG_QUALITY = 0.82;
+const MAX_OUTPUT_BYTES = 180 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
-// Resize + compress an image File via Canvas. Returns
-// { base64 (no data URI prefix), format, sizeBytes, dataUri }.
-async function compressImage(file) {
-  if (!ACCEPTED_TYPES.includes(file.type)) {
-    throw new Error(t('Unsupported image type. Use PNG, JPEG, or WebP.'));
-  }
-  const bitmap = await createImageBitmap(file);
-  const { width, height } = bitmap;
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
-  const targetW = Math.round(width * scale);
-  const targetH = Math.round(height * scale);
+function fileToDataUri(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
 
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = src;
+  });
+}
+
+// Render the cropped rectangle to a square JPEG of OUTPUT_DIMENSION.
+async function renderCrop(sourceDataUri, cropPixels) {
+  const img = await loadImage(sourceDataUri);
   const canvas = document.createElement('canvas');
-  canvas.width = targetW;
-  canvas.height = targetH;
+  canvas.width = OUTPUT_DIMENSION;
+  canvas.height = OUTPUT_DIMENSION;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(bitmap, 0, 0, targetW, targetH);
-
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    img,
+    cropPixels.x,
+    cropPixels.y,
+    cropPixels.width,
+    cropPixels.height,
+    0,
+    0,
+    OUTPUT_DIMENSION,
+    OUTPUT_DIMENSION
+  );
   const dataUri = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
   const base64 = dataUri.substring(dataUri.indexOf(',') + 1);
   const sizeBytes = Math.floor((base64.length * 3) / 4);
-  if (sizeBytes > MAX_OUTPUT_BYTES) {
-    throw new Error(
-      t(
-        'Image is too large even after compression. Please choose a smaller image.'
-      )
-    );
-  }
-  return { base64, format: 'jpeg', sizeBytes, dataUri };
+  return { base64, dataUri, sizeBytes };
 }
 
 export default class ProfileImageModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      mode: 'view', // 'view' | 'crop'
       previewDataUri: props.currentImageSrc || null,
+      sourceDataUri: null, // original full-res image being cropped
+      crop: { x: 0, y: 0 },
+      zoom: 1,
+      croppedAreaPixels: null,
       compressed: null,
       loading: false,
       saving: false,
@@ -54,37 +76,94 @@ export default class ProfileImageModal extends Component {
   }
 
   componentDidUpdate(prevProps) {
+    const { currentImageSrc } = this.props;
+    const { dirty, compressed } = this.state;
     if (
-      prevProps.currentImageSrc !== this.props.currentImageSrc &&
-      !this.state.dirty &&
-      !this.state.compressed
+      prevProps.currentImageSrc !== currentImageSrc &&
+      !dirty &&
+      !compressed
     ) {
       // eslint-disable-next-line react/no-did-update-set-state
-      this.setState({ previewDataUri: this.props.currentImageSrc || null });
+      this.setState({ previewDataUri: currentImageSrc || null });
     }
   }
 
   handleBeforeUpload = async (file) => {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      message.error(t('Unsupported image type. Use PNG, JPEG, or WebP.'));
+      return false;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      message.error(t('File too large. Maximum 8 MB.'));
+      return false;
+    }
     this.setState({ loading: true });
     try {
-      const compressed = await compressImage(file);
+      const sourceDataUri = await fileToDataUri(file);
       this.setState({
-        previewDataUri: compressed.dataUri,
-        compressed,
-        dirty: true,
+        sourceDataUri,
+        mode: 'crop',
+        crop: { x: 0, y: 0 },
+        zoom: 1,
+        croppedAreaPixels: null,
         loading: false,
       });
     } catch (e) {
-      message.error(e.message || t('Failed to process image.'));
+      message.error(e.message || t('Failed to read image.'));
       this.setState({ loading: false });
     }
-    return false; // prevent Upload from auto-uploading
+    return false;
+  };
+
+  onCropChange = (crop) => this.setState({ crop });
+
+  onZoomChange = (zoom) => this.setState({ zoom });
+
+  onCropComplete = (_areaPercent, areaPixels) =>
+    this.setState({ croppedAreaPixels: areaPixels });
+
+  handleApplyCrop = async () => {
+    const { sourceDataUri, croppedAreaPixels } = this.state;
+    if (!sourceDataUri || !croppedAreaPixels) return;
+    this.setState({ loading: true });
+    try {
+      const out = await renderCrop(sourceDataUri, croppedAreaPixels);
+      if (out.sizeBytes > MAX_OUTPUT_BYTES) {
+        message.error(t('Cropped image is too large. Try a smaller region.'));
+        this.setState({ loading: false });
+        return;
+      }
+      this.setState({
+        mode: 'view',
+        previewDataUri: out.dataUri,
+        compressed: {
+          base64: out.base64,
+          format: 'jpeg',
+          sizeBytes: out.sizeBytes,
+        },
+        dirty: true,
+        loading: false,
+        sourceDataUri: null,
+      });
+    } catch (e) {
+      message.error(e.message || t('Failed to crop image.'));
+      this.setState({ loading: false });
+    }
+  };
+
+  handleCancelCrop = () => {
+    this.setState({
+      mode: 'view',
+      sourceDataUri: null,
+      croppedAreaPixels: null,
+    });
   };
 
   handleSave = async () => {
     const { compressed } = this.state;
+    const { onCancel, onSuccess } = this.props;
     if (!compressed) {
-      this.props.onCancel();
+      onCancel();
       return;
     }
     this.setState({ saving: true });
@@ -95,9 +174,9 @@ export default class ProfileImageModal extends Component {
       });
       message.success(t('Profile image updated.'));
       this.setState({ saving: false });
-      if (this.props.onSuccess) {
-        this.props.onSuccess({
-          dataUri: compressed.dataUri,
+      if (onSuccess) {
+        onSuccess({
+          dataUri: this.state.previewDataUri,
           response: res,
         });
       }
@@ -120,6 +199,7 @@ export default class ProfileImageModal extends Component {
   };
 
   handleRemoveSaved = async () => {
+    const { onSuccess } = this.props;
     this.setState({ removing: true });
     try {
       await client.skyline.profileImageDelete();
@@ -131,8 +211,8 @@ export default class ProfileImageModal extends Component {
         removedInSession: true,
         removing: false,
       });
-      if (this.props.onSuccess) {
-        this.props.onSuccess({ dataUri: null, response: null });
+      if (onSuccess) {
+        onSuccess({ dataUri: null, response: null });
       }
     } catch (e) {
       const detail =
@@ -144,15 +224,121 @@ export default class ProfileImageModal extends Component {
     }
   };
 
+  renderCropUI() {
+    const { sourceDataUri, crop, zoom, loading } = this.state;
+    return (
+      <div>
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: 320,
+            background: '#1a1a1a',
+            borderRadius: 4,
+            overflow: 'hidden',
+          }}
+        >
+          <Cropper
+            image={sourceDataUri}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            cropShape="round"
+            showGrid={false}
+            onCropChange={this.onCropChange}
+            onZoomChange={this.onZoomChange}
+            onCropComplete={this.onCropComplete}
+          />
+        </div>
+        <div style={{ marginTop: 16, padding: '0 8px' }}>
+          <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>
+            {t('Zoom')}
+          </div>
+          <Slider
+            min={1}
+            max={3}
+            step={0.05}
+            value={zoom}
+            onChange={this.onZoomChange}
+            disabled={loading}
+          />
+        </div>
+        <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
+          {t('Drag to reposition, use the slider to zoom.')}
+        </div>
+      </div>
+    );
+  }
+
+  renderViewUI() {
+    const { previewDataUri, loading, busy } = this.state;
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            width: 160,
+            height: 160,
+            margin: '0 auto 16px',
+            borderRadius: '50%',
+            background: '#f0f0f0',
+            border: '2px dashed #d9d9d9',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {loading ? (
+            <Spin />
+          ) : previewDataUri ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <img
+              src={previewDataUri}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <span style={{ color: '#999' }}>{t('No image')}</span>
+          )}
+        </div>
+        <div>
+          <Upload
+            accept="image/png,image/jpeg,image/webp"
+            showUploadList={false}
+            beforeUpload={this.handleBeforeUpload}
+          >
+            <Button icon={<UploadOutlined />} disabled={busy}>
+              {t('Choose Image')}
+            </Button>
+          </Upload>
+          {previewDataUri && this.state.compressed && (
+            <Button
+              onClick={this.handleClearPreview}
+              disabled={busy}
+              style={{ marginLeft: 8 }}
+            >
+              {t('Clear')}
+            </Button>
+          )}
+        </div>
+        <div style={{ marginTop: 12, color: '#999', fontSize: 12 }}>
+          {t(
+            'PNG, JPEG, or WebP (max 8 MB). Images are cropped and resized to {max}x{max}.',
+            { max: OUTPUT_DIMENSION }
+          )}
+        </div>
+      </div>
+    );
+  }
+
   render() {
     const { visible, onCancel } = this.props;
     const {
-      previewDataUri,
-      loading,
-      saving,
-      removing,
+      mode,
       compressed,
       dirty,
+      saving,
+      removing,
+      loading,
       removedInSession,
     } = this.state;
 
@@ -160,100 +346,78 @@ export default class ProfileImageModal extends Component {
     const busy = saving || removing;
     const hasServerImage = !!this.props.currentImageSrc && !removedInSession;
 
+    let footer;
+    if (mode === 'crop') {
+      footer = [
+        <Button
+          key="cancel-crop"
+          onClick={this.handleCancelCrop}
+          disabled={loading}
+        >
+          {t('Cancel')}
+        </Button>,
+        <Button
+          key="apply-crop"
+          type="primary"
+          icon={<ScissorOutlined />}
+          loading={loading}
+          onClick={this.handleApplyCrop}
+          style={{
+            background: 'var(--primary-color)',
+            borderColor: 'var(--primary-color)',
+          }}
+        >
+          {t('Apply Crop')}
+        </Button>,
+      ];
+    } else {
+      footer = [
+        hasServerImage && (
+          <Button
+            key="remove"
+            danger
+            icon={<DeleteOutlined />}
+            loading={removing}
+            disabled={saving}
+            onClick={this.handleRemoveSaved}
+          >
+            {t('Remove')}
+          </Button>
+        ),
+        <Button key="cancel" onClick={onCancel} disabled={busy}>
+          {t('Cancel')}
+        </Button>,
+        <Button
+          key="save"
+          type="primary"
+          loading={saving}
+          disabled={!canSave || removing}
+          onClick={this.handleSave}
+          style={{
+            background: 'var(--primary-color)',
+            borderColor: 'var(--primary-color)',
+          }}
+        >
+          {t('Save')}
+        </Button>,
+      ];
+    }
+
     return (
       <Modal
         visible={visible}
         open={visible}
-        title={t('Change Profile Image')}
-        onCancel={onCancel}
-        maskClosable={!busy}
+        title={
+          mode === 'crop' ? t('Crop Profile Image') : t('Change Profile Image')
+        }
+        onCancel={mode === 'crop' ? this.handleCancelCrop : onCancel}
+        maskClosable={!busy && mode !== 'crop'}
         closable={!busy}
-        footer={[
-          hasServerImage && (
-            <Button
-              key="remove"
-              danger
-              icon={<DeleteOutlined />}
-              loading={removing}
-              disabled={saving}
-              onClick={this.handleRemoveSaved}
-            >
-              {t('Remove')}
-            </Button>
-          ),
-          <Button key="cancel" onClick={onCancel} disabled={busy}>
-            {t('Cancel')}
-          </Button>,
-          <Button
-            key="save"
-            type="primary"
-            loading={saving}
-            disabled={!canSave || removing}
-            onClick={this.handleSave}
-            style={{
-              background: 'var(--primary-color)',
-              borderColor: 'var(--primary-color)',
-            }}
-          >
-            {t('Save')}
-          </Button>,
-        ]}
+        footer={footer}
         destroyOnClose
+        width={mode === 'crop' ? 520 : 460}
       >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 160,
-              height: 160,
-              margin: '0 auto 16px',
-              borderRadius: '50%',
-              background: '#f0f0f0',
-              border: '2px dashed #d9d9d9',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {loading ? (
-              <Spin />
-            ) : previewDataUri ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <img
-                src={previewDataUri}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <span style={{ color: '#999' }}>{t('No image')}</span>
-            )}
-          </div>
-          <div>
-            <Upload
-              accept="image/png,image/jpeg,image/webp"
-              showUploadList={false}
-              beforeUpload={this.handleBeforeUpload}
-            >
-              <Button icon={<UploadOutlined />} disabled={busy}>
-                {t('Choose Image')}
-              </Button>
-            </Upload>
-            {previewDataUri && compressed && (
-              <Button
-                onClick={this.handleClearPreview}
-                disabled={busy}
-                style={{ marginLeft: 8 }}
-              >
-                {t('Clear')}
-              </Button>
-            )}
-          </div>
-          <div style={{ marginTop: 12, color: '#999', fontSize: 12 }}>
-            {t(
-              'PNG, JPEG, or WebP. Images are resized to {max}x{max} and compressed automatically.',
-              { max: MAX_DIMENSION }
-            )}
-          </div>
-        </div>
+        {mode === 'crop' ? this.renderCropUI() : this.renderViewUI()}
       </Modal>
     );
   }
