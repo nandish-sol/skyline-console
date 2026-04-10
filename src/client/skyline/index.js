@@ -139,6 +139,15 @@ export class SkylineClient extends Base {
       {
         key: 'sso',
       },
+      {
+        key: 'profile',
+        isResource: false,
+        extendOperations: [
+          {
+            key: 'image',
+          },
+        ],
+      },
     ];
   }
 }

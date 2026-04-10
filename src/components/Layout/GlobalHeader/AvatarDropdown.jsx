@@ -14,10 +14,11 @@
 
 import React from 'react';
 import { inject, observer } from 'mobx-react';
-import { Menu, Spin, Button, Select } from 'antd';
+import { Menu, Spin, Button, Select, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import i18n from 'core/i18n';
 import ItemActionButtons from 'components/Tables/Base/ItemActionButtons';
+import { skylineBase } from 'client/client/constants';
 import Password from './Password';
 import Token from './Token';
 import OpenRc from './OpenRc';
@@ -27,6 +28,17 @@ import styles from './index.less';
 const { getLocale, setLocale, SUPPORT_LOCALES } = i18n;
 
 export class AvatarDropdown extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      profileImageSrc: null,
+    };
+  }
+
+  componentDidMount() {
+    this.fetchProfileImage();
+  }
+
   get rootStore() {
     return this.props.rootStore || {};
   }
@@ -37,6 +49,26 @@ export class AvatarDropdown extends React.Component {
   }
 
   changeLang = (language) => setLocale(language, true);
+
+  fetchProfileImage = async () => {
+    try {
+      const baseUrl = skylineBase();
+      const response = await fetch(`${baseUrl}/profile/image`, {
+        credentials: 'same-origin',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.profile_image_base64) {
+          const format = data.image_format || 'png';
+          this.setState({
+            profileImageSrc: `data:image/${format};base64,${data.profile_image_base64}`,
+          });
+        }
+      }
+    } catch (e) {
+      // silently fail - will show default icon
+    }
+  };
 
   onMenuClick = (event) => {
     const { key } = event;
@@ -182,14 +214,24 @@ export class AvatarDropdown extends React.Component {
       </Menu>
     );
     // return currentUser && currentUser.name ? menuHeaderDropdown : null;
+    const { profileImageSrc } = this.state;
     return (
       <HeaderDropdown overlay={menuHeaderDropdown}>
         <div className={`${styles.action}`}>
-          <Button
-            shape="circle"
-            icon={<UserOutlined />}
-            className={styles.avatar}
-          />
+          {profileImageSrc ? (
+            <Avatar
+              src={profileImageSrc}
+              size={30}
+              className={styles.avatar}
+              style={{ cursor: 'pointer' }}
+            />
+          ) : (
+            <Button
+              shape="circle"
+              icon={<UserOutlined />}
+              className={styles.avatar}
+            />
+          )}
         </div>
       </HeaderDropdown>
     );
