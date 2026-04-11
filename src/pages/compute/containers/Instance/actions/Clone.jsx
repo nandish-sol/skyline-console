@@ -27,7 +27,7 @@ export class Clone extends ModalAction {
 
   static allowed = (item) =>
     Promise.resolve(
-      ['active', 'stopped', 'shutoff'].includes(
+      ['active', 'stopped', 'shutoff', 'paused'].includes(
         (item.status || '').toLowerCase()
       )
     );

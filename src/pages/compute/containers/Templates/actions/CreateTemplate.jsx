@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import { inject, observer } from 'mobx-react';
+import { has } from 'lodash';
 import { ModalAction } from 'containers/Action';
 import globalServerStore from 'stores/nova/instance';
 import client from 'client';
@@ -21,7 +22,13 @@ const CATEGORY_OPTIONS = [
   { label: t('Base OS'), value: 'base-os' },
   { label: t('Web Server'), value: 'web-server' },
   { label: t('Database'), value: 'database' },
+  { label: t('Cache'), value: 'cache' },
+  { label: t('Message Queue'), value: 'message-queue' },
   { label: t('Application'), value: 'application' },
+  { label: t('Container Host'), value: 'container-host' },
+  { label: t('Monitoring'), value: 'monitoring' },
+  { label: t('Dev Tools'), value: 'dev-tools' },
+  { label: t('ML / AI'), value: 'ml-ai' },
   { label: t('Custom'), value: 'custom' },
 ];
 
@@ -34,6 +41,7 @@ export class CreateTemplate extends ModalAction {
 
   init() {
     this.serverStore = globalServerStore;
+    this.state = { ...(this.state || {}), selectedInstance: null };
     this.fetchInstances();
   }
 
@@ -55,6 +63,13 @@ export class CreateTemplate extends ModalAction {
     return this.values.name;
   }
 
+  get labelCol() {
+    return {
+      xs: { span: 8 },
+      sm: { span: 7 },
+    };
+  }
+
   static policy = '';
 
   static allowed = () => Promise.resolve(true);
@@ -71,6 +86,16 @@ export class CreateTemplate extends ModalAction {
         label: `${s.name} (${s.id.substring(0, 8)})`,
       }));
   }
+
+  onValuesChange = (changedFields) => {
+    if (has(changedFields, 'instance_id')) {
+      const value = changedFields.instance_id;
+      const id =
+        value && typeof value === 'object' ? value.value || value.id : value;
+      const found = (this.serverStore.list.data || []).find((s) => s.id === id);
+      this.setState({ selectedInstance: found || null });
+    }
+  };
 
   get tips() {
     return t(
@@ -90,6 +115,83 @@ export class CreateTemplate extends ModalAction {
     };
   }
 
+  getPreviewFields() {
+    const inst = this.state && this.state.selectedInstance;
+    if (!inst) {
+      return [];
+    }
+    const od = inst.origin_data || {};
+    const flavor = inst.flavor_info || inst.flavor || od.flavor || {};
+    const flavorName =
+      flavor.original_name || flavor.name || inst.flavor_name || '-';
+    const vcpus = flavor.vcpus != null ? flavor.vcpus : '-';
+    const ram = flavor.ram != null ? flavor.ram : '-';
+    const diskNum =
+      flavor.disk != null
+        ? flavor.disk
+        : flavor.root_gb != null
+        ? flavor.root_gb
+        : null;
+    const disk =
+      diskNum === 0
+        ? t('Volume-backed')
+        : diskNum == null
+        ? '-'
+        : `${diskNum} GB`;
+    const addresses = od.addresses || inst.addresses || {};
+    const networkNames = Object.keys(addresses);
+    const sgs = (od.security_groups || inst.security_groups || [])
+      .map((sg) => sg.name)
+      .filter(Boolean);
+    const az =
+      od['OS-EXT-AZ:availability_zone'] ||
+      inst['OS-EXT-AZ:availability_zone'] ||
+      inst.availability_zone;
+    const keyName = od.key_name || inst.key_name;
+    return [
+      {
+        name: 'preview_flavor',
+        label: t('Flavor'),
+        type: 'label',
+        iconType: 'flavor',
+        content: `${flavorName}  (${vcpus} vCPU / ${ram} MB / ${disk})`,
+      },
+      {
+        name: 'preview_network',
+        label: t('Network'),
+        type: 'label',
+        iconType: 'network',
+        content: networkNames.length ? networkNames.join(', ') : '-',
+      },
+      {
+        name: 'preview_security_groups',
+        label: t('Security Groups'),
+        type: 'label',
+        iconType: 'security',
+        content: sgs.length ? sgs.join(', ') : '-',
+      },
+      {
+        name: 'preview_keypair',
+        label: t('Key Pair'),
+        type: 'label',
+        iconType: 'keypair',
+        content: keyName || '-',
+      },
+      {
+        name: 'preview_az',
+        label: t('Availability Zone'),
+        type: 'label',
+        content: az || '-',
+      },
+      {
+        name: 'preview_status',
+        label: t('Current Status'),
+        type: 'label',
+        content: (inst.status || '-').toString().toUpperCase(),
+      },
+    ];
+  }
+
   get formItems() {
     return [
       {
@@ -98,12 +200,14 @@ export class CreateTemplate extends ModalAction {
         type: 'select',
         options: this.instances,
         required: true,
+        showSearch: true,
         isLoading: this.serverStore.list.isLoading,
         tip: t(
           'Select an instance to create a template from. ' +
             'Only Active, Stopped, or Paused instances are shown.'
         ),
       },
+      ...this.getPreviewFields(),
       {
         name: 'name',
         label: t('Template Name'),
@@ -121,6 +225,7 @@ export class CreateTemplate extends ModalAction {
         label: t('Category'),
         type: 'select',
         options: CATEGORY_OPTIONS,
+        showSearch: true,
       },
       {
         name: 'description',
@@ -129,11 +234,11 @@ export class CreateTemplate extends ModalAction {
       },
       {
         name: 'delete_instance',
-        label: t('Delete Instance After Conversion'),
+        label: t('Delete Source'),
         type: 'check',
         content: t(
-          'Warning: The source instance will be permanently ' +
-            'deleted after the template is created.'
+          'Delete the source instance after the template is created. ' +
+            'This cannot be undone.'
         ),
       },
     ];

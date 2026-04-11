@@ -21,8 +21,25 @@ const CATEGORY_OPTIONS = [
   { label: t('Base OS'), value: 'base-os' },
   { label: t('Web Server'), value: 'web-server' },
   { label: t('Database'), value: 'database' },
+  { label: t('Cache'), value: 'cache' },
+  { label: t('Message Queue'), value: 'message-queue' },
   { label: t('Application'), value: 'application' },
+  { label: t('Container Host'), value: 'container-host' },
+  { label: t('Monitoring'), value: 'monitoring' },
+  { label: t('Dev Tools'), value: 'dev-tools' },
+  { label: t('ML / AI'), value: 'ml-ai' },
   { label: t('Custom'), value: 'custom' },
+];
+
+const EDITABLE_KEYS = [
+  'name',
+  'xloud_template_name',
+  'xloud_template_version',
+  'xloud_template_category',
+  'description',
+  'xloud_template_description',
+  'visibility',
+  'protected',
 ];
 
 export class Edit extends ModalAction {
@@ -44,22 +61,66 @@ export class Edit extends ModalAction {
 
   static allowed = (item) => Promise.resolve(item.status === 'active');
 
+  get labelCol() {
+    return {
+      xs: { span: 8 },
+      sm: { span: 7 },
+    };
+  }
+
+  get tips() {
+    return t(
+      'Editable: name, version, category, description, visibility, protected. ' +
+        'Captured VM configuration (flavor, network, security groups, key pair) ' +
+        'is read-only — it reflects the source instance at template creation time.'
+    );
+  }
+
+  get capturedFlavorText() {
+    const { item } = this;
+    const name = item.xloud_template_flavor_name || '-';
+    const v = item.xloud_template_vcpus || '-';
+    const r = item.xloud_template_ram_mb || '-';
+    const rawDisk = item.xloud_template_disk_gb;
+    const diskNum = rawDisk == null || rawDisk === '' ? null : Number(rawDisk);
+    const disk =
+      diskNum === 0
+        ? t('Volume-backed')
+        : diskNum == null || Number.isNaN(diskNum)
+        ? '-'
+        : `${diskNum} GB`;
+    return `${name}  (${v} vCPU / ${r} MB / ${disk})`;
+  }
+
+  get capturedSecurityGroupsText() {
+    const { item } = this;
+    try {
+      const arr = JSON.parse(item.xloud_template_security_groups || '[]');
+      if (Array.isArray(arr) && arr.length) {
+        return arr.join(', ');
+      }
+    } catch (e) {
+      // ignore
+    }
+    return '-';
+  }
+
   get defaultValue() {
     const { item } = this;
     return {
       name: item.xloud_template_name || item.name || '',
       xloud_template_version: item.xloud_template_version || '1.0',
       xloud_template_category: item.xloud_template_category || 'custom',
-      description: item.description || '',
+      description: item.xloud_template_description || item.description || '',
       visibility: item.visibility === 'public',
       protected: item.protected || false,
-      xloud_template_flavor_name: item.xloud_template_flavor_name || '',
-      xloud_template_vcpus: item.xloud_template_vcpus || '',
-      xloud_template_ram_mb: item.xloud_template_ram_mb || '',
-      xloud_template_disk_gb: item.xloud_template_disk_gb || '',
-      xloud_template_network_name: item.xloud_template_network_name || '',
-      xloud_template_keypair: item.xloud_template_keypair || '',
-      xloud_template_az: item.xloud_template_az || '',
+      captured_flavor: this.capturedFlavorText,
+      captured_network: item.xloud_template_network_name || '-',
+      captured_security_groups: this.capturedSecurityGroupsText,
+      captured_keypair: item.xloud_template_keypair || '-',
+      captured_az: item.xloud_template_az || '-',
+      captured_source_instance: item.xloud_template_source_instance || '-',
+      captured_created_by: item.xloud_template_created_by || '-',
     };
   }
 
@@ -82,6 +143,7 @@ export class Edit extends ModalAction {
         label: t('Category'),
         type: 'select',
         options: CATEGORY_OPTIONS,
+        showSearch: true,
         required: true,
       },
       {
@@ -104,39 +166,45 @@ export class Edit extends ModalAction {
         content: t('Protected'),
       },
       {
-        name: 'xloud_template_flavor_name',
+        name: 'captured_flavor',
         label: t('Flavor'),
-        type: 'input',
+        type: 'label',
+        iconType: 'flavor',
       },
       {
-        name: 'xloud_template_vcpus',
-        label: t('vCPUs'),
-        type: 'input',
-      },
-      {
-        name: 'xloud_template_ram_mb',
-        label: t('RAM (MB)'),
-        type: 'input',
-      },
-      {
-        name: 'xloud_template_disk_gb',
-        label: t('Disk (GB)'),
-        type: 'input',
-      },
-      {
-        name: 'xloud_template_network_name',
+        name: 'captured_network',
         label: t('Network'),
-        type: 'input',
+        type: 'label',
+        iconType: 'network',
       },
       {
-        name: 'xloud_template_keypair',
+        name: 'captured_security_groups',
+        label: t('Security Groups'),
+        type: 'label',
+        iconType: 'security',
+      },
+      {
+        name: 'captured_keypair',
         label: t('Key Pair'),
-        type: 'input',
+        type: 'label',
+        iconType: 'keypair',
       },
       {
-        name: 'xloud_template_az',
+        name: 'captured_az',
         label: t('Availability Zone'),
-        type: 'input',
+        type: 'label',
+      },
+      {
+        name: 'captured_source_instance',
+        label: t('Source Instance'),
+        type: 'label',
+        iconType: 'instance',
+      },
+      {
+        name: 'captured_created_by',
+        label: t('Created By'),
+        type: 'label',
+        iconType: 'user',
       },
     ];
   }
@@ -146,31 +214,35 @@ export class Edit extends ModalAction {
       protected: isProtected = false,
       visibility = false,
       name,
-      ...rest
+      description,
+      xloud_template_version,
+      xloud_template_category,
     } = values;
     const newValues = {
-      ...rest,
       name,
       xloud_template_name: name,
+      description: description || '',
+      xloud_template_description: description || '',
+      xloud_template_version,
+      xloud_template_category,
       protected: isProtected,
       visibility: visibility ? 'public' : 'private',
     };
     const changeValues = [];
     Object.keys(newValues).forEach((key) => {
+      if (!EDITABLE_KEYS.includes(key)) {
+        return;
+      }
       const orig = get(this.item.originData, key);
-      const isNew = newValues[key];
-      if (orig != null && orig !== newValues[key] && isNew) {
-        changeValues.push({
-          op: 'replace',
-          path: `/${key}`,
-          value: newValues[key],
-        });
-      } else if ((orig == null || !has(this.item.originData, key)) && isNew) {
-        changeValues.push({
-          op: 'add',
-          path: `/${key}`,
-          value: newValues[key],
-        });
+      const next = newValues[key];
+      if (orig != null && orig !== next) {
+        changeValues.push({ op: 'replace', path: `/${key}`, value: next });
+      } else if (
+        (orig == null || !has(this.item.originData, key)) &&
+        next !== '' &&
+        next != null
+      ) {
+        changeValues.push({ op: 'add', path: `/${key}`, value: next });
       }
     });
     if (changeValues.length === 0) {
