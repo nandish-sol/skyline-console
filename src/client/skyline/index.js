@@ -103,6 +103,33 @@ export class SkylineClient extends Base {
             key: 'profile',
           },
           {
+            name: 'profileImage',
+            key: 'profile/image',
+          },
+          {
+            name: 'profileImageUpload',
+            key: 'profile/image',
+            method: 'put',
+          },
+          {
+            name: 'profileImageDelete',
+            key: 'profile/image',
+            method: 'delete',
+          },
+          {
+            name: 'profileMe',
+            key: 'profile/me',
+          },
+          {
+            name: 'profileMeUpdate',
+            key: 'profile/me',
+            method: 'patch',
+          },
+          {
+            name: 'profileSessions',
+            key: 'profile/sessions',
+          },
+          {
             name: 'switchProject',
             method: 'post',
             generate: (projectId, domainId) => {

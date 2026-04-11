@@ -23,6 +23,7 @@ import { Layout } from 'antd';
 import GlobalHeader from 'components/Layout/GlobalHeader';
 import OperationToast from 'components/OperationToast';
 import { setRouteMap, getPath } from 'utils/route-map';
+import client from 'client';
 import renderAdminMenu from '../admin-menu';
 import renderMenu from '../menu';
 import renderUserMenu from '../user-menu';
@@ -31,6 +32,19 @@ import LayoutMenu from './Menu';
 import styles from './index.less';
 
 const { Header } = Layout;
+
+async function applyThemeFromProfile() {
+  try {
+    const resp = await client.skyline.profileMe();
+    const data = resp && resp.data ? resp.data : resp;
+    const color = data && data.theme_color;
+    if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
+      document.documentElement.style.setProperty('--primary-color', color);
+    }
+  } catch (e) {
+    // ignore — theme is a best-effort cosmetic
+  }
+}
 
 export class BaseLayout extends Component {
   autoReaction = reaction(
@@ -233,6 +247,7 @@ export class BaseLayout extends Component {
     }
     this.routes = this.props.route.routes;
     setRouteMap(this.menu);
+    applyThemeFromProfile();
   }
 
   renderNotice() {
