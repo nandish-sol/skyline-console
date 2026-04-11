@@ -7,14 +7,12 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Skeleton, Typography } from 'antd';
+import { Card, Row, Col, Skeleton } from 'antd';
 import client from 'client';
 import styles from './hardwareInfoCard.less';
 
-const { Text } = Typography;
-
 const formatBytes = (b) => {
-  if (!b || b <= 0) return '-';
+  if (!b || b <= 0) return null;
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   let f = Number(b);
   let i = 0;
@@ -25,16 +23,51 @@ const formatBytes = (b) => {
   return `${f.toFixed(2)} ${units[i]}`;
 };
 
-const Row2 = ({ label, value }) => (
-  <div className={styles.row}>
-    <span className={styles.label}>{label}</span>
-    <span className={styles.value} title={value || '-'}>
-      {value || '-'}
-    </span>
-  </div>
-);
+const isEmpty = (v) => {
+  if (v === null || v === undefined) return true;
+  if (typeof v === 'string') {
+    const s = v.trim();
+    return (
+      s === '' ||
+      s === '-' ||
+      s.toLowerCase() === 'n/a' ||
+      s.toLowerCase() === 'unknown'
+    );
+  }
+  if (Array.isArray(v)) return v.length === 0 || v.every(isEmpty);
+  return false;
+};
 
-const HardwareInfoCard = () => {
+const Row2 = ({ label, value }) => {
+  if (isEmpty(value)) return null;
+  return (
+    <div className={styles.row}>
+      <span className={styles.label}>{label}</span>
+      <span className={styles.value} title={String(value)}>
+        {value}
+      </span>
+    </div>
+  );
+};
+
+const CardSection = ({ title, rows }) => {
+  const visibleRows = rows.filter((r) => !isEmpty(r.value));
+  if (visibleRows.length === 0) return null;
+  return (
+    <Card
+      className={styles.card}
+      title={<span className={styles['card-title']}>{title}</span>}
+      size="small"
+      bordered
+    >
+      {visibleRows.map((r) => (
+        <Row2 key={r.label} label={r.label} value={r.value} />
+      ))}
+    </Card>
+  );
+};
+
+const HardwareInfoCard = ({ host }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -42,8 +75,11 @@ const HardwareInfoCard = () => {
   useEffect(() => {
     let cancelled = false;
     const fetchIt = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const resp = await client.skyline.xavsHardware.list();
+        const params = host ? { host } : undefined;
+        const resp = await client.skyline.xavsHardware.list(params);
         if (!cancelled) {
           setData(resp || {});
           setLoading(false);
@@ -59,7 +95,7 @@ const HardwareInfoCard = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [host]);
 
   if (loading) {
     return (
@@ -70,14 +106,7 @@ const HardwareInfoCard = () => {
   }
 
   if (error || !data) {
-    return (
-      <Card className={styles.wrapper} bordered={false}>
-        <Text type="secondary">
-          {t('Could not load hardware info')}
-          {error ? `: ${error}` : ''}
-        </Text>
-      </Card>
-    );
+    return null;
   }
 
   const hw = data.hardware || {};
@@ -85,77 +114,64 @@ const HardwareInfoCard = () => {
   const sys = data.system_information || {};
   const net = data.networking || {};
 
-  const ipList =
-    (net.nics || [])
-      .flatMap((n) => n.ipv4 || [])
-      .filter((v, i, a) => a.indexOf(v) === i) || [];
+  const memDisplay = hw.memory_display || formatBytes(hw.memory_bytes);
+
+  const ipList = (net.nics || [])
+    .flatMap((n) => n.ipv4 || [])
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  const hardwareRows = [
+    { label: t('Manufacturer'), value: hw.manufacturer },
+    { label: t('Model'), value: hw.model },
+    { label: t('CPU'), value: hw.cpu },
+    { label: t('Memory'), value: memDisplay },
+    { label: t('Hostname'), value: net.hostname },
+    { label: t('Primary IP'), value: net.primary_ipv4 },
+    { label: t('Default Gateway'), value: net.default_gateway },
+    { label: t('DNS Servers'), value: (net.dns_servers || []).join(', ') },
+    ...(ipList.length > 1
+      ? [{ label: t('All IPv4'), value: ipList.join(', ') }]
+      : []),
+  ];
+
+  const configRows = [
+    { label: t('OS Image'), value: conf.os_image },
+    { label: t('OS Version'), value: conf.os_version },
+    { label: t('Kernel'), value: conf.kernel },
+    { label: t('HA State'), value: conf.ha_state },
+    { label: t('Live Migration'), value: conf.live_migration },
+  ];
+
+  const sysRows = [
+    { label: t('Host Time'), value: sys.host_time },
+    { label: t('Asset Tag'), value: sys.asset_tag },
+    { label: t('Serial Number'), value: sys.serial_number },
+    { label: t('BIOS Vendor'), value: sys.bios_vendor },
+    { label: t('BIOS Version'), value: sys.bios_version },
+    { label: t('BIOS Release Date'), value: sys.bios_date },
+    { label: t('Board Vendor'), value: sys.board_vendor },
+    { label: t('Board'), value: sys.board_name },
+    { label: t('Chassis Vendor'), value: sys.chassis_vendor },
+    { label: t('Product Family'), value: sys.product_family },
+  ];
+
+  const allEmpty =
+    hardwareRows.every((r) => isEmpty(r.value)) &&
+    configRows.every((r) => isEmpty(r.value)) &&
+    sysRows.every((r) => isEmpty(r.value));
+  if (allEmpty) return null;
 
   return (
     <div className={styles.wrapper}>
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Card
-            className={styles.card}
-            title={
-              <span className={styles['card-title']}>{t('Hardware')}</span>
-            }
-            size="small"
-            bordered
-          >
-            <Row2 label={t('Manufacturer')} value={hw.manufacturer} />
-            <Row2 label={t('Model')} value={hw.model} />
-            <Row2 label={t('CPU')} value={hw.cpu} />
-            <Row2
-              label={t('Memory')}
-              value={hw.memory_display || formatBytes(hw.memory_bytes)}
-            />
-            <Row2 label={t('Hostname')} value={net.hostname} />
-            <Row2 label={t('Primary IP')} value={net.primary_ipv4} />
-            <Row2 label={t('Default Gateway')} value={net.default_gateway} />
-            <Row2
-              label={t('DNS Servers')}
-              value={(net.dns_servers || []).join(', ')}
-            />
-            {ipList.length > 1 && (
-              <Row2 label={t('All IPv4')} value={ipList.join(', ')} />
-            )}
-          </Card>
+          <CardSection title={t('Hardware')} rows={hardwareRows} />
         </Col>
-
         <Col xs={24} md={12}>
-          <Card
-            className={styles.card}
-            title={
-              <span className={styles['card-title']}>{t('Configuration')}</span>
-            }
-            size="small"
-            bordered
-          >
-            <Row2 label={t('OS Image')} value={conf.os_image} />
-            <Row2 label={t('OS Version')} value={conf.os_version} />
-            <Row2 label={t('HA State')} value={conf.ha_state} />
-            <Row2 label={t('Live Migration')} value={conf.live_migration} />
-          </Card>
-
-          <Card
-            className={styles.card}
-            style={{ marginTop: 16 }}
-            title={
-              <span className={styles['card-title']}>
-                {t('System Information')}
-              </span>
-            }
-            size="small"
-            bordered
-          >
-            <Row2 label={t('Host Time')} value={sys.host_time} />
-            <Row2 label={t('Asset Tag')} value={sys.asset_tag} />
-            <Row2 label={t('Serial Number')} value={sys.serial_number} />
-            <Row2 label={t('BIOS Vendor')} value={sys.bios_vendor} />
-            <Row2 label={t('BIOS Version')} value={sys.bios_version} />
-            <Row2 label={t('BIOS Release Date')} value={sys.bios_date} />
-            <Row2 label={t('Board')} value={sys.board_name} />
-          </Card>
+          <CardSection title={t('Configuration')} rows={configRows} />
+          <div style={{ marginTop: 16 }}>
+            <CardSection title={t('System Information')} rows={sysRows} />
+          </div>
         </Col>
       </Row>
     </div>
