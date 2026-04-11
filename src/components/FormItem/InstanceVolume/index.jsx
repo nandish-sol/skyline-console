@@ -25,7 +25,51 @@ import {
 } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
+import client from 'client';
 import styles from './index.less';
+
+// Cache of backend pool capabilities, shared across every
+// InstanceVolume instance in a page render (system disk + all data
+// disks) so we fetch /scheduler-stats/get_pools only once per wizard.
+// Shape: { loading: bool, data: { backendName: {thin:bool, thick:bool} } }
+const poolCapabilityCache = {
+  loaded: false,
+  loading: null,
+  data: {},
+};
+
+const fetchPoolCapabilities = () => {
+  if (poolCapabilityCache.loaded) {
+    return Promise.resolve(poolCapabilityCache.data);
+  }
+  if (poolCapabilityCache.loading) {
+    return poolCapabilityCache.loading;
+  }
+  poolCapabilityCache.loading = client.cinder.pools
+    .list({ detail: true })
+    .then((resp) => {
+      const pools = (resp && resp.pools) || [];
+      const map = {};
+      pools.forEach((p) => {
+        const caps = p.capabilities || {};
+        const backend = caps.volume_backend_name;
+        if (!backend) return;
+        const bucket = map[backend] || (map[backend] = {});
+        if (caps.thin_provisioning_support === true) bucket.thin = true;
+        if (caps.thick_provisioning_support === true) bucket.thick = true;
+      });
+      poolCapabilityCache.data = map;
+      poolCapabilityCache.loaded = true;
+      poolCapabilityCache.loading = null;
+      return map;
+    })
+    .catch(() => {
+      poolCapabilityCache.loaded = true;
+      poolCapabilityCache.loading = null;
+      return {};
+    });
+  return poolCapabilityCache.loading;
+};
 
 // Pull the backend name + provisioning capability out of a Cinder
 // volume type's extra specs. The Cinder scheduler's CapabilitiesFilter
@@ -117,6 +161,7 @@ export default class InstanceVolume extends React.Component {
       size,
       deleteType,
       minSize,
+      poolCapabilities: poolCapabilityCache.data,
     };
   }
 
@@ -137,6 +182,19 @@ export default class InstanceVolume extends React.Component {
 
   componentDidMount() {
     this.onChange();
+    // Load live pool capabilities once per page so we know what each
+    // backend actually supports — independent of the volume type's
+    // extra_specs. Needed because most deployments don't set the
+    // standard capabilities:* extra specs on their types even when
+    // the driver reports real thin/thick support in get_volume_stats.
+    fetchPoolCapabilities().then((data) => {
+      if (this._unmounted) return;
+      this.setState({ poolCapabilities: data }, this.onChange);
+    });
+  }
+
+  componentWillUnmount() {
+    this._unmounted = true;
   }
 
   // eslint-disable-next-line react/sort-comp
@@ -247,45 +305,64 @@ export default class InstanceVolume extends React.Component {
     const currentInfo = extractBackendInfo(currentTypeOption);
     const currentBackendModes =
       (currentInfo && modes[currentInfo.backend]) || {};
-    // Row visibility: always render once a type is picked. If that
-    // type has no provisioning capability info at all, the toggle is
-    // disabled with an explanatory tooltip.
+
+    // Look up what the actual driver reports for this backend via the
+    // scheduler-stats pool data we fetched in componentDidMount. This
+    // is the *real* capability — extra_specs is just an operator-set
+    // override used by the scheduler filter. For most deployments the
+    // extra_specs are missing, so the pool stats give us ground truth.
+    const { poolCapabilities } = this.state;
+    const poolCaps =
+      (currentInfo &&
+        poolCapabilities &&
+        poolCapabilities[currentInfo.backend]) ||
+      {};
+
     const showProvisioning = !!currentTypeOption;
-    const hasProvisioningSupport =
-      !!currentInfo &&
-      (currentInfo.supportsThin ||
-        currentInfo.supportsThick ||
-        currentInfo.supportsBoth);
-    const supportsThin =
-      !!currentBackendModes.thin || (currentInfo && currentInfo.supportsThin);
-    const supportsThick =
-      !!currentBackendModes.thick || (currentInfo && currentInfo.supportsThick);
-    // Pre-selected mode: if the current type exposes a single mode use
-    // that; if it supports both explicitly (standard capabilities
-    // flags) then leave it unselected so the user picks; if neither,
-    // leave it unselected.
-    const currentMode = currentInfo?.mode || null;
+
+    // Does the type's backend support either mode at all? Prefer
+    // explicit extra_specs on the type → else the live driver stats.
+    const thinFromSpec =
+      !!currentBackendModes.thin || !!currentInfo?.supportsThin;
+    const thickFromSpec =
+      !!currentBackendModes.thick || !!currentInfo?.supportsThick;
+    const supportsThin = thinFromSpec || !!poolCaps.thin;
+    const supportsThick = thickFromSpec || !!poolCaps.thick;
+
+    // hasProvisioningSupport = we know at least one mode is reachable
+    const hasProvisioningSupport = supportsThin || supportsThick;
+
+    // Mode pre-selection for the radio buttons, in priority order:
+    //   1. explicit extra_spec on the type (supportsBoth → null, pick)
+    //   2. whichever mode the driver actually reports from pool stats
+    //      (if only one of thin/thick is supported, pre-select it even
+    //      when the toggle is disabled so the user sees what they'll get)
+    let currentMode = currentInfo?.mode || null;
+    if (!currentMode && supportsThin && !supportsThick) currentMode = 'thin';
+    else if (!currentMode && supportsThick && !supportsThin)
+      currentMode = 'thick';
+
     const thinDisabled = !supportsThin;
     const thickDisabled = !supportsThick;
-    // The toggle is editable when both modes are reachable for this
-    // backend — either because of a sibling type OR because the same
-    // type's standard capabilities flags report both.
+    // The toggle is editable only when both modes are actually
+    // reachable for this backend.
     const toggleDisabled =
       !hasProvisioningSupport || !(supportsThin && supportsThick);
 
     // Explain the toggle state in the tooltip. Three cases:
-    //   1. No provisioning:type spec at all → "backend doesn't support it"
-    //   2. Only one mode available → "backend only supports <mode>"
-    //   3. Both available → "pick thin or thick"
+    //   1. Backend has no provisioning capability at all
+    //   2. Backend only supports one mode
+    //   3. Both supported → editable toggle
     let provisioningTooltip;
     if (!hasProvisioningSupport) {
       provisioningTooltip = t(
         'This backend does not support thin/thick provisioning. Provisioning is controlled by the storage driver and cannot be chosen per-volume.'
       );
     } else if (toggleDisabled) {
+      const supportedLabel = currentMode === 'thin' ? t('Thin') : t('Thick');
       provisioningTooltip = t(
-        'This backend only supports {mode} provisioning. Pick a different volume type to access the other mode.',
-        { mode: currentMode || '-' }
+        'This backend only supports {mode} provisioning. All volumes created on this backend will be {mode}-provisioned.',
+        { mode: supportedLabel }
       );
     } else {
       provisioningTooltip = t(
