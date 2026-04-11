@@ -27,30 +27,24 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import styles from './index.less';
 
-// Pull the backend name + provisioning mode out of a Cinder volume
-// type's extra specs. The UI uses these to decide whether the
-// Thin/Thick toggle should show and whether it should be editable
-// (sibling type on the same backend has the opposite mode).
-//
-// The Cinder scheduler's CapabilitiesFilter understands two standard
-// extra-spec keys for provisioning:
+// Pull the backend name + provisioning capability out of a Cinder
+// volume type's extra specs. The Cinder scheduler's CapabilitiesFilter
+// understands two standard extra-spec keys for provisioning — we use
+// those as the ONLY source of truth:
 //
 //   capabilities:thin_provisioning_support  = "<is> True"
 //   capabilities:thick_provisioning_support = "<is> True"
 //
-// Volume types set one of these (or both) to route to backends that
-// report a matching capability. We read those as the source of truth.
-// As a backward-compat fallback we also accept the non-standard
-// `provisioning:type = thin|thick` key that XLoud wiki examples may
-// have used.
+// A volume type sets one (or both) to route to backends that report a
+// matching capability via get_volume_stats(). Any type that carries
+// neither key is treated as "provisioning-agnostic" — the toggle
+// shows disabled with an explanatory tooltip.
 //
-// Ceph RBD detection is a heuristic fallback: backends whose name or
-// driver contains "ceph" / "rbd" are forced to thin regardless of the
-// extra spec, because Ceph RBD can't do thick.
+// Accept the common `<is> True`, `true`, `1`, `yes` forms for boolean
+// values — Cinder doc examples use all of these.
 const parseBoolSpec = (val) => {
   if (val == null) return false;
   const s = String(val).trim().toLowerCase();
-  // Accept "true", "<is> true", "1", "yes"
   return /(^|\s)(true|1|yes)$/.test(s);
 };
 
@@ -59,52 +53,36 @@ const extractBackendInfo = (typeOption) => {
   const specs = typeOption.originData.extra_specs || {};
   const backend = specs.volume_backend_name || '';
 
-  // Preferred: standard Cinder capability specs
-  const stdThin = parseBoolSpec(
+  const supportsThin = parseBoolSpec(
     specs['capabilities:thin_provisioning_support']
   );
-  const stdThick = parseBoolSpec(
+  const supportsThick = parseBoolSpec(
     specs['capabilities:thick_provisioning_support']
   );
 
-  // Fallback: non-standard "provisioning:type" spec
-  const rawMode = (specs['provisioning:type'] || '').toLowerCase();
-  const fallbackMode =
-    rawMode === 'thin' || rawMode === 'thick' ? rawMode : null;
-
-  // Resolve to a single mode for THIS type:
-  //   - If both std flags are set → type supports both; mode is null (caller
-  //     will treat it as a type that can live under either Thin or Thick).
-  //   - If only one std flag is set → that's the mode.
-  //   - If neither std flag is set → use the fallback.
+  // Pre-selected radio state for THIS type:
+  //   only thin  → 'thin'
+  //   only thick → 'thick'
+  //   both       → null (user actively picks)
+  //   neither    → null (toggle disabled)
   let mode = null;
-  if (stdThin && !stdThick) mode = 'thin';
-  else if (stdThick && !stdThin) mode = 'thick';
-  else if (!stdThin && !stdThick) mode = fallbackMode;
-  // (stdThin && stdThick) → mode stays null, means "both supported by this one type"
-
-  const backendLc = backend.toLowerCase();
-  const isCeph = backendLc.includes('ceph') || backendLc.includes('rbd');
+  if (supportsThin && !supportsThick) mode = 'thin';
+  else if (supportsThick && !supportsThin) mode = 'thick';
 
   return {
     backend,
     mode,
-    isCeph,
-    supportsBoth: stdThin && stdThick,
-    supportsThin: stdThin || mode === 'thin',
-    supportsThick: stdThick || mode === 'thick',
+    supportsBoth: supportsThin && supportsThick,
+    supportsThin,
+    supportsThick,
   };
 };
 
 // Build a map of { backend_name: {thin: type_id, thick: type_id} }
-// by scanning the full volume-type list. A backend is considered to
-// support a mode when either:
-//   (a) we find a type whose capabilities:<mode>_provisioning_support
-//       is set (the standard Cinder key), or
-//   (b) we find a type whose fallback provisioning:type = <mode>.
-//
-// A single type may appear under both "thin" and "thick" entries
-// when its standard capability specs say it supports both.
+// by scanning the full volume-type list. For each backend we record
+// the first type that advertises thin support and the first that
+// advertises thick support. A single type that supports both appears
+// under both keys.
 const buildBackendModes = (options) => {
   const map = {};
   (options || []).forEach((it) => {
@@ -280,12 +258,8 @@ export default class InstanceVolume extends React.Component {
         currentInfo.supportsBoth);
     const supportsThin =
       !!currentBackendModes.thin || (currentInfo && currentInfo.supportsThin);
-    // Ceph backends can never do thick — disable the button and show a
-    // small inline note.
-    const supportsThick = currentInfo?.isCeph
-      ? false
-      : !!currentBackendModes.thick ||
-        (currentInfo && currentInfo.supportsThick);
+    const supportsThick =
+      !!currentBackendModes.thick || (currentInfo && currentInfo.supportsThick);
     // Pre-selected mode: if the current type exposes a single mode use
     // that; if it supports both explicitly (standard capabilities
     // flags) then leave it unselected so the user picks; if neither,
@@ -375,17 +349,6 @@ export default class InstanceVolume extends React.Component {
             </Radio.Button>
           </Radio.Group>
         </Tooltip>
-        {currentInfo?.isCeph && (
-          <span
-            style={{
-              marginLeft: 8,
-              color: 'rgba(0,0,0,0.45)',
-              fontSize: 12,
-            }}
-          >
-            {t('(Ceph RBD is always thin)')}
-          </span>
-        )}
         {!hasProvisioningSupport && (
           <span
             style={{
