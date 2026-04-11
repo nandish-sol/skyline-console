@@ -13,9 +13,36 @@
 // limitations under the License.
 
 import React from 'react';
-import { Select, Checkbox, Row, Col, Form, InputNumber } from 'antd';
+import {
+  Select,
+  Checkbox,
+  Row,
+  Col,
+  Form,
+  InputNumber,
+  Radio,
+  Tooltip,
+} from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
+import client from 'client';
 import styles from './index.less';
+
+// Keys the operator configures under skyline's volume_provisioning_mapping
+// setting. Values are Cinder volume type IDs (or names). When neither is
+// set, the whole Thin/Thick selector is hidden and the component falls
+// back to the plain-old volume type dropdown.
+const PROVISIONING_KEYS = ['thin', 'thick'];
+
+// Heuristic: flag a volume type as Ceph-backed when its volume_backend_name
+// extra spec contains "ceph" or "rbd". Used to warn admins who map
+// "thick" to a Ceph pool (Ceph RBD is always thin — thick is impossible).
+const isCephBacked = (typeOption) => {
+  if (!typeOption || !typeOption.originData) return false;
+  const specs = typeOption.originData.extra_specs || {};
+  const backend = (specs.volume_backend_name || '').toLowerCase();
+  return backend.includes('ceph') || backend.includes('rbd');
+};
 
 export default class InstanceVolume extends React.Component {
   static propTypes = {
@@ -39,6 +66,8 @@ export default class InstanceVolume extends React.Component {
       size,
       deleteType,
       minSize,
+      provisioningMapping: null,
+      provisioningType: null,
     };
   }
 
@@ -59,8 +88,10 @@ export default class InstanceVolume extends React.Component {
 
   componentDidMount() {
     this.onChange();
+    this.fetchProvisioningMapping();
   }
 
+  // eslint-disable-next-line react/sort-comp
   checkVolume = (callback) => {
     const { type } = this.state;
     if (!type) {
@@ -86,7 +117,7 @@ export default class InstanceVolume extends React.Component {
     this.checkVolume(() => {
       const { onChange, options = [] } = this.props;
       if (onChange) {
-        const { type, deleteType } = this.state;
+        const { type, deleteType, provisioningType } = this.state;
         const deleteTypeLabel =
           deleteType === 1
             ? t('Deleted with the instance')
@@ -96,6 +127,7 @@ export default class InstanceVolume extends React.Component {
           ...this.state,
           deleteTypeLabel,
           typeOption,
+          provisioningType,
         };
         onChange(value);
       }
@@ -130,6 +162,52 @@ export default class InstanceVolume extends React.Component {
     );
   };
 
+  onProvisioningChange = (e) => {
+    const newProvType = e.target.value;
+    const { options = [] } = this.props;
+    this.setState((prev) => {
+      const mappedTypeId =
+        prev.provisioningMapping && prev.provisioningMapping[newProvType];
+      const matched =
+        mappedTypeId && options.find((it) => it.value === mappedTypeId);
+      return {
+        provisioningType: newProvType,
+        // Auto-switch the selected volume type to the operator-mapped one.
+        type: matched ? matched.value : prev.type,
+      };
+    }, this.onChange);
+  };
+
+  getBackendWarning() {
+    const { provisioningType, type } = this.state;
+    const { options = [] } = this.props;
+    if (provisioningType !== 'thick') return null;
+    const typeOption = options.find((it) => it.value === type);
+    if (!typeOption) return null;
+    if (!isCephBacked(typeOption)) return null;
+    return t(
+      'Ceph RBD only supports thin provisioning. Selecting Thick on a Ceph-backed volume type has no effect.'
+    );
+  }
+
+  fetchProvisioningMapping = async () => {
+    try {
+      const resp = await client.skyline.setting.show(
+        'volume_provisioning_mapping'
+      );
+      const raw = (resp && resp.setting && resp.setting.value) || {};
+      const filtered = {};
+      PROVISIONING_KEYS.forEach((k) => {
+        if (raw[k]) filtered[k] = raw[k];
+      });
+      if (Object.keys(filtered).length > 0) {
+        this.setState({ provisioningMapping: filtered });
+      }
+    } catch (e) {
+      // Setting absent or unreadable — feature stays hidden.
+    }
+  };
+
   render() {
     const {
       options,
@@ -139,8 +217,14 @@ export default class InstanceVolume extends React.Component {
       validateStatus,
       errorMsg,
       minSize,
+      provisioningMapping,
+      provisioningType,
     } = this.state;
     const { name, showDelete = true } = this.props;
+    const showProvisioningToggle =
+      provisioningMapping && Object.keys(provisioningMapping).length > 0;
+    const backendWarning = this.getBackendWarning();
+
     const selects = (
       <Select
         value={type}
@@ -168,6 +252,48 @@ export default class InstanceVolume extends React.Component {
       </Checkbox>
     ) : null;
 
+    const provisioningRadio = showProvisioningToggle ? (
+      <div style={{ marginBottom: 12 }}>
+        <span className={styles.label}>
+          {t('Provisioning')}
+          <Tooltip
+            title={t(
+              'Thin = space allocated on demand. Thick = full size reserved up-front. Operator maps each mode to a Cinder volume type.'
+            )}
+          >
+            <InfoCircleOutlined
+              style={{ marginLeft: 4, color: 'rgba(0,0,0,0.45)' }}
+            />
+          </Tooltip>
+        </span>
+        <Radio.Group
+          value={provisioningType}
+          onChange={this.onProvisioningChange}
+          size="small"
+          style={{ marginLeft: 8 }}
+        >
+          {provisioningMapping.thin && (
+            <Radio.Button value="thin">{t('Thin')}</Radio.Button>
+          )}
+          {provisioningMapping.thick && (
+            <Radio.Button value="thick">{t('Thick')}</Radio.Button>
+          )}
+        </Radio.Group>
+        {backendWarning && (
+          <div
+            style={{
+              color: '#faad14',
+              fontSize: 12,
+              marginTop: 4,
+              marginLeft: 80,
+            }}
+          >
+            {backendWarning}
+          </div>
+        )}
+      </div>
+    ) : null;
+
     return (
       <Form.Item
         className={styles['instance-volume']}
@@ -175,6 +301,7 @@ export default class InstanceVolume extends React.Component {
         validateStatus={validateStatus}
         help={errorMsg}
       >
+        {provisioningRadio}
         <Row gutter={24}>
           <Col span={8}>
             <span className={styles.label}>{t('Type')}</span>
