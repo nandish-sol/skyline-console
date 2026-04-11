@@ -3,32 +3,40 @@
 }
 
 .card {
+  height: 100%;
+
   :global(.ant-card-head) {
-    min-height: 40px;
-    padding: 0 16px;
+    min-height: 36px;
+    padding: 0 14px;
+    background: #fafbfc;
+    border-bottom: 1px solid #e8eaed;
   }
 
   :global(.ant-card-head-title) {
-    padding: 10px 0;
+    padding: 8px 0;
   }
 
   :global(.ant-card-body) {
-    padding: 12px 16px;
+    padding: 10px 14px;
   }
 }
 
 .card-title {
   color: #1f2937;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
 }
 
 .row {
   display: flex;
-  align-items: flex-start;
-  padding: 6px 0;
-  font-size: 13px;
-  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  border-bottom: 1px solid #f5f6f7;
 
   &:last-child {
     border-bottom: none;
@@ -36,14 +44,16 @@
 }
 
 .label {
-  flex: 0 0 160px;
-  color: #6b7280;
+  flex: 0 0 130px;
+  color: #8a94a6;
   font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .value {
   flex: 1 1 auto;
-  color: #111827;
+  color: #1f2937;
+  font-weight: 500;
   word-break: break-word;
   overflow-wrap: anywhere;
 }

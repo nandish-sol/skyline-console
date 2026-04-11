@@ -46,7 +46,7 @@
 .sider {
   position: relative;
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
 
   :global {
     .ant-layout-sider-trigger {
@@ -73,17 +73,21 @@
   overflow-y: auto;
 
   &::-webkit-scrollbar {
-    width: 12px;
+    width: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background-color: #f5f5f5;
+    background-color: transparent;
     border-radius: 0;
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: lightgray;
-    border-radius: 0;
+    background-color: rgba(255, 255, 255, 20%);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 35%);
   }
 
   :global {
@@ -157,7 +161,25 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - @header-height);
+  overflow-y: auto;
   background-color: @background-color;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 18%);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 28%);
+  }
 }
 
 .sub-menu {
