@@ -6,9 +6,11 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Card, Row, Col, Skeleton } from 'antd';
+import { get } from 'lodash';
 import client from 'client';
+import BaseContentContext from 'components/PrometheusChart/component/context';
 import styles from './hardwareInfoCard.less';
 
 const formatBytes = (b) => {
@@ -67,7 +69,15 @@ const CardSection = ({ title, rows }) => {
   );
 };
 
-const HardwareInfoCard = ({ host }) => {
+const HardwareInfoCard = ({ host: hostProp }) => {
+  const ctx = useContext(BaseContentContext);
+  // Pick hostname from the BaseContent node selector (hostname label
+  // first, instance label fallback) so this card re-fetches whenever
+  // the user changes the Node dropdown above.
+  const nodeHost =
+    get(ctx, 'node.metric.hostname') || get(ctx, 'node.metric.instance') || '';
+  const host = hostProp || nodeHost || '';
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);

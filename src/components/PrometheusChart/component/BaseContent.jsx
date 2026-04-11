@@ -35,6 +35,7 @@ const BaseContent = (props) => {
     renderNodeSelect,
     fetchNodesFunc,
     defaultNode,
+    headerContent,
     children,
     type,
   } = props;
@@ -112,6 +113,7 @@ const BaseContent = (props) => {
           </div>
         )}
         {renderNodeSelect && (isFetchingNodes ? <Spin /> : <Nodes />)}
+        {headerContent && !isFetchingNodes ? headerContent : null}
         {(renderNodeSelect && isFetchingNodes) ||
         (isLoading &&
           chartConfig?.chartCardList?.length !== 0 &&

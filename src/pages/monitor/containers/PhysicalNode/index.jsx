@@ -314,10 +314,7 @@ export const chartConfig = {
   topCardList,
 };
 const PhysicalNode = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', flex: '1 0 auto' }}>
-    <HardwareInfoCard />
-    <BaseContent chartConfig={chartConfig} />
-  </div>
+  <BaseContent chartConfig={chartConfig} headerContent={<HardwareInfoCard />} />
 );
 
 export default PhysicalNode;
