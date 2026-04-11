@@ -146,6 +146,21 @@ const SERVICE_ACCOUNTS = [
   'searchlight',
 ];
 
+// Heuristic regexes for auto-dependency detection.
+//
+// WRITE_RULE_RE matches any mutating action — create/update/delete plus
+// all lifecycle verbs (start/stop/attach/extend/migrate/...). When the
+// user enables one of these, we auto-enable every READ rule in the
+// same service so the role can actually navigate to the thing it can
+// now modify.
+//
+// READ_RULE_RE matches any view/list/get rule that the write depends on.
+const WRITE_RULE_RE =
+  /:(create|update|delete|modify|add|remove|set|attach|detach|resize|extend|rebuild|migrate|live_migrate|shelve|unshelve|lock|unlock|suspend|resume|pause|unpause|start|stop|reboot|restore|backup|snapshot|revert|clone|manage|unmanage|retype|force|reset|apply|put|post|patch|associate|disassociate|import|export|save|upload|download|activate|deactivate|enable|disable|grant|revoke|assign|unassign|rotate|upgrade|downgrade)(s?)(_|:|$)/i;
+
+const READ_RULE_RE =
+  /:(list|get|show|index|detail|details|describe|view|find|search|stat|info|metadata)(s?)(_|:|$|_all|_by|_for)/i;
+
 function isSystemRole(name) {
   if (SYSTEM_ROLES.includes(name)) return true;
   if (name.startsWith('load-balancer_')) return true;
@@ -572,6 +587,40 @@ export class RBACAdmin extends React.Component {
     return serviceData.categories || {};
   };
 
+  isWriteRule = (ruleKey) => WRITE_RULE_RE.test(ruleKey);
+
+  // Find read rules that live in the SAME category panel as the given
+  // write rule. The matrix groups rules into panels like "Instance
+  // Lifecycle", "Volumes", "Security Groups" — when the admin ticks
+  // "Create Instance" in Instance Lifecycle, we auto-enable "List
+  // Instances" + "View Instance Details" from the same panel (but NOT
+  // every read rule in the whole nova service).
+  findReadRulesInSameCategory = (ruleKey) => {
+    const { matrixData } = this.state;
+    if (!matrixData || !matrixData.services) return [];
+    const servicePrefix = ruleKey.split(':')[0];
+    const service = matrixData.services.find(
+      (s) => s.service === servicePrefix
+    );
+    if (!service) return [];
+    const categories = service.categories || {};
+    // Locate the category that contains this rule
+    let containingRules = null;
+    Object.values(categories).forEach((rules) => {
+      if ((rules || []).some((r) => r && r.rule === ruleKey)) {
+        containingRules = rules;
+      }
+    });
+    if (!containingRules) return [];
+    const reads = [];
+    containingRules.forEach((rule) => {
+      if (rule && rule.rule && READ_RULE_RE.test(rule.rule)) {
+        reads.push(rule.rule);
+      }
+    });
+    return reads;
+  };
+
   // Permission dependency map: when a permission is enabled,
   // auto-enable its prerequisites (list + view are always required)
   getPrerequisites = (ruleKey) => {
@@ -639,6 +688,20 @@ export class RBACAdmin extends React.Component {
       }
     });
 
+    // Generic rule: any write/mutation action auto-enables the read
+    // rules (list/get/show/index/detail/...) in the SAME category panel.
+    // Scoped to the panel so ticking "Create Instance" in the Instance
+    // Lifecycle panel only auto-enables "List Instances" + "View Instance
+    // Details" — not every read rule across the whole nova service.
+    if (this.isWriteRule(ruleKey)) {
+      const reads = this.findReadRulesInSameCategory(ruleKey);
+      reads.forEach((dep) => {
+        if (dep !== ruleKey && deps.indexOf(dep) < 0) {
+          deps.push(dep);
+        }
+      });
+    }
+
     return deps;
   };
 
@@ -650,11 +713,31 @@ export class RBACAdmin extends React.Component {
       };
 
       // When enabling a permission, auto-enable its prerequisites
+      // (and surface a toast so the user sees what happened).
+      const newlyEnabled = [];
       if (checked) {
         const prereqs = this.getPrerequisites(ruleKey);
         prereqs.forEach((dep) => {
+          const wasChecked =
+            dep in prev.modalPermissions
+              ? prev.modalPermissions[dep]
+              : this.getRolePermissionFromMatrix(prev.editingRole, dep);
+          if (!wasChecked) {
+            newlyEnabled.push(dep);
+          }
           updated[dep] = true;
         });
+      }
+      if (newlyEnabled.length > 0) {
+        const labels = newlyEnabled
+          .slice(0, 4)
+          .map((k) => k.split(':').pop())
+          .join(', ');
+        const suffix =
+          newlyEnabled.length > 4 ? ` (+${newlyEnabled.length - 4} more)` : '';
+        message.info(
+          `Auto-enabled ${newlyEnabled.length} prerequisite permission(s): ${labels}${suffix}`
+        );
       }
 
       return { modalPermissions: updated };
