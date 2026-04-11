@@ -15,6 +15,7 @@
 import React from 'react';
 import { observer, inject } from 'mobx-react';
 import { skylineBase } from 'client/client/constants';
+import PermissionDenied from 'components/PermissionDenied';
 import {
   Table,
   Tabs,
@@ -152,6 +153,12 @@ function isSystemRole(name) {
   return false;
 }
 
+function makeApiError(status, detail) {
+  const err = new Error(detail);
+  err.status = status;
+  return err;
+}
+
 async function apiFetch(url, options = {}) {
   // Route /api/v1/* through the skyline nginx proxy (same as license, health APIs)
   const proxyUrl = url.startsWith('/api/v1/')
@@ -168,11 +175,19 @@ async function apiFetch(url, options = {}) {
   if (!resp.ok) {
     let errorMsg = `Request failed: ${resp.status}`;
     try {
-      errorMsg = await resp.text();
+      const body = await resp.text();
+      if (body) {
+        try {
+          const parsed = JSON.parse(body);
+          errorMsg = parsed.detail || parsed.message || body;
+        } catch (e) {
+          errorMsg = body;
+        }
+      }
     } catch (e) {
       /* ignore */
     }
-    throw new Error(errorMsg);
+    throw makeApiError(resp.status, errorMsg);
   }
   if (resp.status === 204 || resp.headers.get('content-length') === '0') {
     return null;
@@ -180,7 +195,7 @@ async function apiFetch(url, options = {}) {
   try {
     return await resp.json();
   } catch (e) {
-    throw new Error('Invalid response format');
+    throw makeApiError(resp.status, 'Invalid response format');
   }
 }
 
@@ -246,7 +261,17 @@ export class RBACAdmin extends React.Component {
       const permResult = results[2];
 
       if (matrixResult.status === 'rejected') {
-        this.setState({ error: 'service_unavailable', loading: false });
+        const matrixErr = matrixResult.reason;
+        const status =
+          (matrixErr && matrixErr.status) ||
+          (rolesResult.status === 'rejected' &&
+            rolesResult.reason &&
+            rolesResult.reason.status);
+        const errorKind =
+          status === 401 || status === 403
+            ? 'permission_denied'
+            : 'service_unavailable';
+        this.setState({ error: errorKind, loading: false });
         return;
       }
 
@@ -275,7 +300,11 @@ export class RBACAdmin extends React.Component {
         error: null,
       });
     } catch (err) {
-      this.setState({ error: 'service_unavailable', loading: false });
+      const errorKind =
+        err && (err.status === 401 || err.status === 403)
+          ? 'permission_denied'
+          : 'service_unavailable';
+      this.setState({ error: errorKind, loading: false });
     }
   };
 
@@ -1305,6 +1334,14 @@ export class RBACAdmin extends React.Component {
     }
 
     if (error && !matrixData) {
+      if (error === 'permission_denied') {
+        return (
+          <PermissionDenied
+            resourceName={t('RBAC Management')}
+            serviceName={t('Keystone')}
+          />
+        );
+      }
       return (
         <div style={{ textAlign: 'center', paddingTop: 120 }}>
           <span
