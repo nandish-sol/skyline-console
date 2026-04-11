@@ -25,23 +25,45 @@ import {
 } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
-import client from 'client';
 import styles from './index.less';
 
-// Keys the operator configures under skyline's volume_provisioning_mapping
-// setting. Values are Cinder volume type IDs (or names). When neither is
-// set, the whole Thin/Thick selector is hidden and the component falls
-// back to the plain-old volume type dropdown.
-const PROVISIONING_KEYS = ['thin', 'thick'];
-
-// Heuristic: flag a volume type as Ceph-backed when its volume_backend_name
-// extra spec contains "ceph" or "rbd". Used to warn admins who map
-// "thick" to a Ceph pool (Ceph RBD is always thin — thick is impossible).
-const isCephBacked = (typeOption) => {
-  if (!typeOption || !typeOption.originData) return false;
+// Pull the backend name + provisioning mode out of a Cinder volume type's
+// extra specs. The UI uses these to decide whether the Thin/Thick toggle
+// should show (mode set) and whether it should be editable (sibling type
+// on the same backend has the opposite mode).
+//
+// Convention:
+//   extra_specs.volume_backend_name  → opaque backend identifier
+//   extra_specs.provisioning:type    → "thin" | "thick"
+//
+// Ceph RBD detection is a heuristic fallback: backends whose name or
+// driver contains "ceph" / "rbd" are forced to thin regardless of the
+// extra spec, because Ceph RBD can't do thick.
+const extractBackendInfo = (typeOption) => {
+  if (!typeOption || !typeOption.originData) return null;
   const specs = typeOption.originData.extra_specs || {};
-  const backend = (specs.volume_backend_name || '').toLowerCase();
-  return backend.includes('ceph') || backend.includes('rbd');
+  const backend = specs.volume_backend_name || '';
+  const rawMode = (specs['provisioning:type'] || '').toLowerCase();
+  const mode = rawMode === 'thin' || rawMode === 'thick' ? rawMode : null;
+  const backendLc = backend.toLowerCase();
+  const isCeph = backendLc.includes('ceph') || backendLc.includes('rbd');
+  return { backend, mode, isCeph };
+};
+
+// Build a map of { backend_name: {thin: type_id, thick: type_id} }
+// by scanning the full volume-type list. A backend is considered to
+// support both modes only when we find at least one type with
+// provisioning:type=thin AND one with provisioning:type=thick sharing
+// the same volume_backend_name.
+const buildBackendModes = (options) => {
+  const map = {};
+  (options || []).forEach((it) => {
+    const info = extractBackendInfo(it);
+    if (!info || !info.backend || !info.mode) return;
+    if (!map[info.backend]) map[info.backend] = {};
+    map[info.backend][info.mode] = it.value;
+  });
+  return map;
 };
 
 export default class InstanceVolume extends React.Component {
@@ -66,8 +88,6 @@ export default class InstanceVolume extends React.Component {
       size,
       deleteType,
       minSize,
-      provisioningMapping: null,
-      provisioningType: null,
     };
   }
 
@@ -88,7 +108,6 @@ export default class InstanceVolume extends React.Component {
 
   componentDidMount() {
     this.onChange();
-    this.fetchProvisioningMapping();
   }
 
   // eslint-disable-next-line react/sort-comp
@@ -117,17 +136,19 @@ export default class InstanceVolume extends React.Component {
     this.checkVolume(() => {
       const { onChange, options = [] } = this.props;
       if (onChange) {
-        const { type, deleteType, provisioningType } = this.state;
+        const { type, deleteType } = this.state;
         const deleteTypeLabel =
           deleteType === 1
             ? t('Deleted with the instance')
             : t('Not deleted with the instance');
         const typeOption = options.find((it) => it.value === type);
+        const info = extractBackendInfo(typeOption);
         const value = {
           ...this.state,
           deleteTypeLabel,
           typeOption,
-          provisioningType,
+          provisioningType: info ? info.mode : null,
+          backend: info ? info.backend : null,
         };
         onChange(value);
       }
@@ -162,50 +183,22 @@ export default class InstanceVolume extends React.Component {
     );
   };
 
-  onProvisioningChange = (e) => {
-    const newProvType = e.target.value;
+  // Toggle between the currently-selected type and its sibling on the
+  // same backend that has the opposite provisioning mode. If no sibling
+  // exists (backend supports only one mode) the handler is a no-op and
+  // the toggle is rendered disabled.
+  onProvisioningToggle = (e) => {
+    const newMode = e.target.value;
     const { options = [] } = this.props;
-    this.setState((prev) => {
-      const mappedTypeId =
-        prev.provisioningMapping && prev.provisioningMapping[newProvType];
-      const matched =
-        mappedTypeId && options.find((it) => it.value === mappedTypeId);
-      return {
-        provisioningType: newProvType,
-        // Auto-switch the selected volume type to the operator-mapped one.
-        type: matched ? matched.value : prev.type,
-      };
-    }, this.onChange);
-  };
-
-  getBackendWarning() {
-    const { provisioningType, type } = this.state;
-    const { options = [] } = this.props;
-    if (provisioningType !== 'thick') return null;
-    const typeOption = options.find((it) => it.value === type);
-    if (!typeOption) return null;
-    if (!isCephBacked(typeOption)) return null;
-    return t(
-      'Ceph RBD only supports thin provisioning. Selecting Thick on a Ceph-backed volume type has no effect.'
+    const modes = buildBackendModes(options);
+    const currentTypeOption = options.find(
+      (it) => it.value === this.state.type
     );
-  }
-
-  fetchProvisioningMapping = async () => {
-    try {
-      const resp = await client.skyline.setting.show(
-        'volume_provisioning_mapping'
-      );
-      const raw = (resp && resp.setting && resp.setting.value) || {};
-      const filtered = {};
-      PROVISIONING_KEYS.forEach((k) => {
-        if (raw[k]) filtered[k] = raw[k];
-      });
-      if (Object.keys(filtered).length > 0) {
-        this.setState({ provisioningMapping: filtered });
-      }
-    } catch (e) {
-      // Setting absent or unreadable — feature stays hidden.
-    }
+    const info = extractBackendInfo(currentTypeOption);
+    if (!info || !info.backend) return;
+    const siblingId = (modes[info.backend] || {})[newMode];
+    if (!siblingId || siblingId === this.state.type) return;
+    this.setState({ type: siblingId }, this.onChange);
   };
 
   render() {
@@ -217,13 +210,57 @@ export default class InstanceVolume extends React.Component {
       validateStatus,
       errorMsg,
       minSize,
-      provisioningMapping,
-      provisioningType,
     } = this.state;
     const { name, showDelete = true } = this.props;
-    const showProvisioningToggle =
-      provisioningMapping && Object.keys(provisioningMapping).length > 0;
-    const backendWarning = this.getBackendWarning();
+
+    const modes = buildBackendModes(options);
+    const currentTypeOption = options.find((it) => it.value === type);
+    const currentInfo = extractBackendInfo(currentTypeOption);
+    const currentBackendModes =
+      (currentInfo && modes[currentInfo.backend]) || {};
+    // Row visibility: as soon as the user has picked a volume type we
+    // render the row. When the type carries a provisioning:type extra
+    // spec we wire up the toggle; otherwise we render a disabled
+    // toggle with an explanatory tooltip so users understand why the
+    // backend doesn't offer the choice.
+    const hasProvisioningSupport = !!(currentInfo && currentInfo.mode);
+    const showProvisioning = !!currentTypeOption;
+    const supportsThin =
+      !!currentBackendModes.thin || currentInfo?.mode === 'thin';
+    // Ceph backends can never do thick — disable the button and show a
+    // small inline note.
+    const supportsThick = currentInfo?.isCeph
+      ? false
+      : !!currentBackendModes.thick || currentInfo?.mode === 'thick';
+    const currentMode = currentInfo?.mode || null;
+    const thinDisabled = !supportsThin;
+    const thickDisabled = !supportsThick;
+    // The toggle is editable only when both sibling modes are actually
+    // available for this backend. Otherwise we show it disabled with
+    // the one supported mode pre-selected (or nothing, if the backend
+    // doesn't advertise provisioning at all).
+    const toggleDisabled =
+      !hasProvisioningSupport || !(supportsThin && supportsThick);
+
+    // Explain the toggle state in the tooltip. Three cases:
+    //   1. No provisioning:type spec at all → "backend doesn't support it"
+    //   2. Only one mode available → "backend only supports <mode>"
+    //   3. Both available → "pick thin or thick"
+    let provisioningTooltip;
+    if (!hasProvisioningSupport) {
+      provisioningTooltip = t(
+        'This backend does not support thin/thick provisioning. Provisioning is controlled by the storage driver and cannot be chosen per-volume.'
+      );
+    } else if (toggleDisabled) {
+      provisioningTooltip = t(
+        'This backend only supports {mode} provisioning. Pick a different volume type to access the other mode.',
+        { mode: currentMode || '-' }
+      );
+    } else {
+      provisioningTooltip = t(
+        'Thin = space allocated on demand. Thick = full size reserved up-front. Switches to the sibling volume type on the same backend.'
+      );
+    }
 
     const selects = (
       <Select
@@ -252,44 +289,56 @@ export default class InstanceVolume extends React.Component {
       </Checkbox>
     ) : null;
 
-    const provisioningRadio = showProvisioningToggle ? (
-      <div style={{ marginBottom: 12 }}>
+    const provisioningRow = showProvisioning ? (
+      <div style={{ marginTop: 8, marginBottom: 4 }}>
         <span className={styles.label}>
           {t('Provisioning')}
-          <Tooltip
-            title={t(
-              'Thin = space allocated on demand. Thick = full size reserved up-front. Operator maps each mode to a Cinder volume type.'
-            )}
-          >
+          <Tooltip title={provisioningTooltip}>
             <InfoCircleOutlined
               style={{ marginLeft: 4, color: 'rgba(0,0,0,0.45)' }}
             />
           </Tooltip>
         </span>
-        <Radio.Group
-          value={provisioningType}
-          onChange={this.onProvisioningChange}
-          size="small"
-          style={{ marginLeft: 8 }}
+        <Tooltip
+          title={toggleDisabled ? provisioningTooltip : ''}
+          placement="top"
         >
-          {provisioningMapping.thin && (
-            <Radio.Button value="thin">{t('Thin')}</Radio.Button>
-          )}
-          {provisioningMapping.thick && (
-            <Radio.Button value="thick">{t('Thick')}</Radio.Button>
-          )}
-        </Radio.Group>
-        {backendWarning && (
-          <div
+          <Radio.Group
+            value={currentMode}
+            onChange={this.onProvisioningToggle}
+            size="small"
+            style={{ marginLeft: 8 }}
+            disabled={toggleDisabled}
+          >
+            <Radio.Button value="thin" disabled={thinDisabled}>
+              {t('Thin')}
+            </Radio.Button>
+            <Radio.Button value="thick" disabled={thickDisabled}>
+              {t('Thick')}
+            </Radio.Button>
+          </Radio.Group>
+        </Tooltip>
+        {currentInfo?.isCeph && (
+          <span
             style={{
-              color: '#faad14',
+              marginLeft: 8,
+              color: 'rgba(0,0,0,0.45)',
               fontSize: 12,
-              marginTop: 4,
-              marginLeft: 80,
             }}
           >
-            {backendWarning}
-          </div>
+            {t('(Ceph RBD is always thin)')}
+          </span>
+        )}
+        {!hasProvisioningSupport && (
+          <span
+            style={{
+              marginLeft: 8,
+              color: 'rgba(0,0,0,0.45)',
+              fontSize: 12,
+            }}
+          >
+            {t('(not supported on this backend)')}
+          </span>
         )}
       </div>
     ) : null;
@@ -301,7 +350,6 @@ export default class InstanceVolume extends React.Component {
         validateStatus={validateStatus}
         help={errorMsg}
       >
-        {provisioningRadio}
         <Row gutter={24}>
           <Col span={8}>
             <span className={styles.label}>{t('Type')}</span>
@@ -314,6 +362,7 @@ export default class InstanceVolume extends React.Component {
             {checkbox}
           </Col>
         </Row>
+        {provisioningRow}
       </Form.Item>
     );
   }
