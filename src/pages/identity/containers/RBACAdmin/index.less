@@ -1,0 +1,68 @@
+.rbac-wrapper {
+  padding: 0;
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .roles-card,
+  .matrix-card,
+  .assignments-card {
+    margin-bottom: 20px;
+  }
+
+  .role-tag {
+    margin-bottom: 8px;
+    padding: 4px 12px;
+    font-size: 14px;
+  }
+
+  .category-row {
+    td {
+      font-weight: 600;
+      background: #fafafa !important;
+    }
+  }
+
+  .permission-allowed {
+    color: #52c41a;
+    font-size: 16px;
+  }
+
+  .permission-denied {
+    color: #ff4d4f;
+    font-size: 16px;
+  }
+
+  .column-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+
+  .built-in-label {
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .dirty-indicator {
+    margin-top: 2px;
+  }
+
+  .builtin-column {
+    background: #fafafa;
+  }
+
+  .custom-column {
+    background: #f0f5ff;
+  }
+
+  .save-bar {
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+}

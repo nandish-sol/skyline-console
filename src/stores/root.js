@@ -168,7 +168,10 @@ export class RootStore {
     const globalLicenseStore = require('stores/skyline/license').default;
     globalLicenseStore.fetchLicenseStatus();
     globalLicenseStore.startPolling();
-
+    // Fetch RBAC permissions for current user
+    const globalRBACPermissionsStore =
+      require('stores/skyline/rbac-permissions').default;
+    globalRBACPermissionsStore.fetchPermissions();
     return this.getNeutronExtensions();
   }
 

@@ -16,6 +16,7 @@ import BaseLayout from 'layouts/Basic';
 import E404 from 'pages/base/containers/404';
 // import InstanceDetail from 'pages/compute/containers/Instance/Detail';
 // import RecycleBin from '../containers/RecycleBin';
+import ActivityLog from '../containers/ActivityLog';
 
 const PATH = '/management';
 export default [
@@ -35,6 +36,11 @@ export default [
       //   component: InstanceDetail,
       //   exact: true,
       // },
+      {
+        path: `${PATH}/activity-log-admin`,
+        component: ActivityLog,
+        exact: true,
+      },
       { path: '*', component: E404 },
     ],
   },
