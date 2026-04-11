@@ -28,11 +28,15 @@ export class TemplateStore extends Base {
   get paramsFunc() {
     return (params) => {
       const { current, all_projects, ...rest } = params;
-      return {
-        ...rest,
-        xloud_template: 'true',
-      };
+      return rest;
     };
+  }
+
+  async listDidFetch(items) {
+    if (!items) return [];
+    return items.filter(
+      (it) => String(it.xloud_template || '').toLowerCase() === 'true'
+    );
   }
 
   get mapper() {
