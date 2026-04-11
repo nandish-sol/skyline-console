@@ -11,7 +11,10 @@ class OperationTracker {
 
   @computed get activeOperations() {
     return this.operations.filter(
-      (op) => op.status === 'running' || op.status === 'completed' || op.status === 'failed'
+      (op) =>
+        op.status === 'running' ||
+        op.status === 'completed' ||
+        op.status === 'failed'
     );
   }
 
