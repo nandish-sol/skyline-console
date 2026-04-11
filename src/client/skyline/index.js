@@ -166,6 +166,16 @@ export class SkylineClient extends Base {
       {
         key: 'sso',
       },
+      {
+        name: 'xavsHardware',
+        key: 'xavs-hardware',
+        isResource: false,
+      },
+      {
+        name: 'xavsMetricsNode',
+        key: 'xavs-metrics/node',
+        isResource: false,
+      },
     ];
   }
 }

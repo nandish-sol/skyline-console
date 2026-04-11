@@ -1,0 +1,49 @@
+.wrapper {
+  margin-bottom: 16px;
+}
+
+.card {
+  :global(.ant-card-head) {
+    min-height: 40px;
+    padding: 0 16px;
+  }
+
+  :global(.ant-card-head-title) {
+    padding: 10px 0;
+  }
+
+  :global(.ant-card-body) {
+    padding: 12px 16px;
+  }
+}
+
+.card-title {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.label {
+  flex: 0 0 160px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.value {
+  flex: 1 1 auto;
+  color: #111827;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

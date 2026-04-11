@@ -23,6 +23,7 @@ import { ChartType } from 'components/PrometheusChart/utils/utils';
 import { computePercentage, formatSize, formatUsedTime } from 'src/utils';
 
 import styles from 'components/PrometheusChart/component/styles.less';
+import HardwareInfoCard from './HardwareInfoCard';
 
 export const topCardList = [
   {
@@ -312,6 +313,11 @@ export const chartConfig = {
   chartCardList,
   topCardList,
 };
-const PhysicalNode = () => <BaseContent chartConfig={chartConfig} />;
+const PhysicalNode = () => (
+  <div>
+    <HardwareInfoCard />
+    <BaseContent chartConfig={chartConfig} />
+  </div>
+);
 
 export default PhysicalNode;
