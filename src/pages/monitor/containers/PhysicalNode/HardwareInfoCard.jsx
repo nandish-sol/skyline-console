@@ -164,14 +164,14 @@ const HardwareInfoCard = ({ host }) => {
   return (
     <div className={styles.wrapper}>
       <Row gutter={[16, 16]}>
-        <Col xs={24} md={12}>
+        <Col xs={24} lg={8}>
           <CardSection title={t('Hardware')} rows={hardwareRows} />
         </Col>
-        <Col xs={24} md={12}>
+        <Col xs={24} lg={8}>
           <CardSection title={t('Configuration')} rows={configRows} />
-          <div style={{ marginTop: 16 }}>
-            <CardSection title={t('System Information')} rows={sysRows} />
-          </div>
+        </Col>
+        <Col xs={24} lg={8}>
+          <CardSection title={t('System Information')} rows={sysRows} />
         </Col>
       </Row>
     </div>
