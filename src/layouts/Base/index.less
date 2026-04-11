@@ -164,8 +164,15 @@
   overflow-y: auto;
   background-color: @background-color;
 
+  // Prevent flex children from shrinking to fit the viewport — each
+  // child keeps its natural height so long pages overflow the fixed
+  // .content container and the browser shows the scrollbar below.
+  > * {
+    flex-shrink: 0;
+  }
+
   &::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
   }
 
   &::-webkit-scrollbar-track {
@@ -173,12 +180,12 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 18%);
-    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 22%);
+    border-radius: 5px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 28%);
+    background-color: rgba(0, 0, 0, 32%);
   }
 }
 
