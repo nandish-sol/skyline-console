@@ -46,6 +46,34 @@ const STATUS_COLORS = {
   warn: '#faad14',
 };
 
+const ACCENT_COLOR = '#1677ff';
+const ACCENT_HEAD_BG = '#f0f5ff';
+
+const CARD_ACCENTS = {
+  service: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  availability: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  infrastructure: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  api: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  galera: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  rabbitmq: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+  mariadb: { head: ACCENT_HEAD_BG, border: ACCENT_COLOR },
+};
+
+const accentCardStyle = () => ({
+  borderTop: `3px solid ${ACCENT_COLOR}`,
+  borderRadius: 6,
+  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.06)',
+});
+
+const accentHeadStyle = () => ({
+  backgroundColor: ACCENT_HEAD_BG,
+  borderBottom: `1px solid ${ACCENT_COLOR}22`,
+  fontWeight: 600,
+});
+
+const PAGE_BG = '#f5f7fa';
+const INNER_CARD_BG = '#fafbfc';
+
 export class XAVSHealth extends Component {
   constructor(props) {
     super(props);
@@ -110,11 +138,15 @@ export class XAVSHealth extends Component {
           <Card
             title={
               <span>
-                <CloudServerOutlined style={{ marginRight: 8 }} />
+                <CloudServerOutlined
+                  style={{ marginRight: 8, color: CARD_ACCENTS.service.border }}
+                />
                 {t('Service Health')}
               </span>
             }
             size="small"
+            style={accentCardStyle('service')}
+            headStyle={accentHeadStyle('service')}
             bodyStyle={{ height: 200 }}
           >
             {summary.total > 0 ? (
@@ -143,11 +175,18 @@ export class XAVSHealth extends Component {
           <Card
             title={
               <span>
-                <ApiOutlined style={{ marginRight: 8 }} />
+                <ApiOutlined
+                  style={{
+                    marginRight: 8,
+                    color: CARD_ACCENTS.availability.border,
+                  }}
+                />
                 {t('Overall Availability')}
               </span>
             }
             size="small"
+            style={accentCardStyle('availability')}
+            headStyle={accentHeadStyle('availability')}
             bodyStyle={{ height: 200 }}
           >
             <div style={{ textAlign: 'center', paddingTop: 16 }}>
@@ -180,11 +219,18 @@ export class XAVSHealth extends Component {
           <Card
             title={
               <span>
-                <ClusterOutlined style={{ marginRight: 8 }} />
+                <ClusterOutlined
+                  style={{
+                    marginRight: 8,
+                    color: CARD_ACCENTS.infrastructure.border,
+                  }}
+                />
                 {t('Infrastructure')}
               </span>
             }
             size="small"
+            style={accentCardStyle('infrastructure')}
+            headStyle={accentHeadStyle('infrastructure')}
             bodyStyle={{ height: 200 }}
           >
             <Row gutter={[16, 24]} style={{ paddingTop: 12 }}>
@@ -287,7 +333,9 @@ export class XAVSHealth extends Component {
       <Card
         title={
           <span>
-            <DatabaseOutlined style={{ marginRight: 8 }} />
+            <DatabaseOutlined
+              style={{ marginRight: 8, color: CARD_ACCENTS.galera.border }}
+            />
             {t('Galera Cluster')}
             {mariadb.ready ? (
               <Tag style={{ marginLeft: 8 }} color="success">
@@ -301,7 +349,8 @@ export class XAVSHealth extends Component {
           </span>
         }
         size="small"
-        style={{ width: '100%' }}
+        style={{ width: '100%', ...accentCardStyle('galera') }}
+        headStyle={accentHeadStyle('galera')}
       >
         {items.map((item) => (
           <div
@@ -331,10 +380,6 @@ export class XAVSHealth extends Component {
     const apiServices = services.filter(
       (s) =>
         !s.service.includes('RabbitMQ AMQP') && !s.service.includes('MariaDB')
-    );
-    const infraServices = services.filter(
-      (s) =>
-        s.service.includes('RabbitMQ AMQP') || s.service.includes('MariaDB')
     );
 
     const columns = [
@@ -376,12 +421,15 @@ export class XAVSHealth extends Component {
           <Card
             title={
               <span>
-                <ApiOutlined style={{ marginRight: 8 }} />
+                <ApiOutlined
+                  style={{ marginRight: 8, color: CARD_ACCENTS.api.border }}
+                />
                 {t('OpenStack API Services')}
               </span>
             }
             size="small"
-            style={{ flex: 1 }}
+            style={{ flex: 1, ...accentCardStyle('api') }}
+            headStyle={accentHeadStyle('api')}
           >
             <Table
               columns={columns}
@@ -491,7 +539,9 @@ export class XAVSHealth extends Component {
       <Card
         title={
           <span>
-            <ClusterOutlined style={{ marginRight: 8 }} />
+            <ClusterOutlined
+              style={{ marginRight: 8, color: CARD_ACCENTS.rabbitmq.border }}
+            />
             {t('RabbitMQ Cluster')}
             {rabbitmq.mgmt_version && (
               <Tag style={{ marginLeft: 8 }} color="blue">
@@ -511,7 +561,8 @@ export class XAVSHealth extends Component {
           </span>
         }
         size="small"
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 16, ...accentCardStyle('rabbitmq') }}
+        headStyle={accentHeadStyle('rabbitmq')}
       >
         <Row gutter={[16, 16]}>
           {/* Donut chart for nodes */}
@@ -547,7 +598,11 @@ export class XAVSHealth extends Component {
           <Col span={18}>
             <Row gutter={[12, 12]}>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Connections')}
                     value={totals.connections || 0}
@@ -556,7 +611,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Channels')}
                     value={totals.channels || 0}
@@ -565,7 +624,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Queues')}
                     value={totals.queues || 0}
@@ -574,7 +637,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Exchanges')}
                     value={totals.exchanges || 0}
@@ -583,7 +650,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Messages')}
                     value={queueTotals.messages || 0}
@@ -592,7 +663,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Ready')}
                     value={queueTotals.messages_ready || 0}
@@ -607,7 +682,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Unacked')}
                     value={queueTotals.messages_unacknowledged || 0}
@@ -622,7 +701,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Published')}
                     value={msgStats.publish || 0}
@@ -690,7 +773,9 @@ export class XAVSHealth extends Component {
       <Card
         title={
           <span>
-            <DatabaseOutlined style={{ marginRight: 8 }} />
+            <DatabaseOutlined
+              style={{ marginRight: 8, color: CARD_ACCENTS.mariadb.border }}
+            />
             {t('MariaDB / Galera Cluster')}
             {mariadb.provider_version && (
               <Tag style={{ marginLeft: 8 }} color="blue">
@@ -709,7 +794,8 @@ export class XAVSHealth extends Component {
           </span>
         }
         size="small"
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 16, ...accentCardStyle('mariadb') }}
+        headStyle={accentHeadStyle('mariadb')}
       >
         <Row gutter={[16, 16]}>
           {/* Donut for nodes */}
@@ -747,7 +833,11 @@ export class XAVSHealth extends Component {
           <Col span={18}>
             <Row gutter={[12, 12]}>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Cluster Status')}
                     value={mariadb.cluster_status || '-'}
@@ -763,7 +853,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Local State')}
                     value={mariadb.local_state || '-'}
@@ -779,7 +873,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Cluster Size')}
                     value={mariadb.cluster_size || '-'}
@@ -789,7 +887,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Connected')}
                     value={
@@ -810,7 +912,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Uptime')}
                     value={mariadb.uptime || '-'}
@@ -819,7 +925,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Active Connections')}
                     value={
@@ -832,7 +942,11 @@ export class XAVSHealth extends Component {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card size="small" bordered={false}>
+                <Card
+                  size="small"
+                  bordered={false}
+                  style={{ backgroundColor: INNER_CARD_BG, borderRadius: 4 }}
+                >
                   <Statistic
                     title={t('Node Name')}
                     value={mariadb.node_name || '-'}
@@ -863,7 +977,14 @@ export class XAVSHealth extends Component {
     const { loading, data, error, autoRefresh } = this.state;
 
     return (
-      <div style={{ padding: '16px 24px', height: '100%', overflow: 'auto' }}>
+      <div
+        style={{
+          padding: '16px 24px',
+          height: '100%',
+          overflow: 'auto',
+          backgroundColor: PAGE_BG,
+        }}
+      >
         <div
           style={{
             display: 'flex',

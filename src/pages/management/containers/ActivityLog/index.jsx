@@ -417,6 +417,14 @@ export default class ActivityLog extends Base {
     return true;
   }
 
+  get ableAutoFresh() {
+    return false;
+  }
+
+  get hideCustom() {
+    return true;
+  }
+
   get fetchDataByAllProjects() {
     return false;
   }
