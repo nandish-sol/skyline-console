@@ -285,9 +285,13 @@ export class Login extends Component {
     this.setState({
       loading: false,
     });
-    const {
-      data: { detail = '' },
-    } = error.response;
+    const detail =
+      (error &&
+        error.response &&
+        error.response.data &&
+        error.response.data.detail) ||
+      (error && error.message) ||
+      '';
     const message = detail || '';
     if (
       message.includes(

@@ -164,14 +164,27 @@ export class RootStore {
       this.client.policies.list(),
     ]);
     await this.updateUser(profile, policies.policies || []);
-    // Fetch license status and start polling
-    const globalLicenseStore = require('stores/skyline/license').default;
-    globalLicenseStore.fetchLicenseStatus();
-    globalLicenseStore.startPolling();
-    // Fetch RBAC permissions for current user
-    const globalRBACPermissionsStore =
-      require('stores/skyline/rbac-permissions').default;
-    globalRBACPermissionsStore.fetchPermissions();
+    try {
+      const globalLicenseStore = require('stores/skyline/license').default;
+      globalLicenseStore.fetchLicenseStatus();
+      globalLicenseStore.startPolling();
+    } catch (e) {
+      // license store failure must never block login
+    }
+    try {
+      const globalRBACPermissionsStore =
+        require('stores/skyline/rbac-permissions').default;
+      if (
+        globalRBACPermissionsStore &&
+        globalRBACPermissionsStore.fetchPermissions
+      ) {
+        Promise.resolve(globalRBACPermissionsStore.fetchPermissions()).catch(
+          () => {}
+        );
+      }
+    } catch (e) {
+      // RBAC permission fetch failure must never block login (keystone-only auth)
+    }
     return this.getNeutronExtensions();
   }
 
