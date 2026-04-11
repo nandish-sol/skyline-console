@@ -23,7 +23,7 @@ export class Deploy extends ModalAction {
 
   static buttonText = t('Deploy');
 
-  static policy = 'os_compute_api:servers:create';
+  static policy = '';
 
   static allowed = (item) =>
     Promise.resolve(
