@@ -169,12 +169,10 @@ export class SkylineClient extends Base {
       {
         name: 'xavsHardware',
         key: 'xavs-hardware',
-        isResource: false,
       },
       {
         name: 'xavsMetricsNode',
         key: 'xavs-metrics/node',
-        isResource: false,
       },
     ];
   }
