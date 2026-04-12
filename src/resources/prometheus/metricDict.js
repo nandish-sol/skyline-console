@@ -32,13 +32,16 @@ const metricDict = {
       ],
     },
     physicalCPUUsage: {
-      url: ['openstack_nova_vcpus_used', 'openstack_nova_vcpus_available'],
+      url: [
+        'openstack_nova_vcpus_used or openstack_nova_limits_vcpus_used',
+        'openstack_nova_vcpus_available or openstack_nova_limits_vcpus_max',
+      ],
       finalFormatFunc: [(url) => `sum(${url})`, (url) => `sum(${url})`],
     },
     physicalMemoryUsage: {
       url: [
-        'openstack_nova_memory_used_bytes',
-        'openstack_nova_memory_available_bytes',
+        'openstack_nova_memory_used_bytes or openstack_nova_limits_memory_used',
+        'openstack_nova_memory_available_bytes or openstack_nova_limits_memory_max',
       ],
       finalFormatFunc: [(url) => `sum(${url})`, (url) => `sum(${url})`],
     },
