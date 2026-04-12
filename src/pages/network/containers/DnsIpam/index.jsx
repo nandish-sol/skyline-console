@@ -20,8 +20,8 @@ import {
   Col,
   Checkbox,
   Tooltip,
-  Icon,
 } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -31,12 +31,6 @@ const PROVIDER_TYPES = {
   infoblox: 'Infoblox DDI',
   powerdns: 'PowerDNS',
   msdns: 'Microsoft DNS',
-};
-
-const STATUS_COLORS = {
-  active: 'green',
-  error: 'red',
-  unknown: 'default',
 };
 
 const API_PLACEHOLDERS = {
@@ -401,7 +395,7 @@ export default class DnsIpam extends React.Component {
         <div style={{ marginBottom: 16 }}>
           <Button
             type="primary"
-            icon="plus"
+            icon={<PlusOutlined />}
             onClick={() => this.setState({
               addVisible: true,
               editId: null,
@@ -625,7 +619,7 @@ export default class DnsIpam extends React.Component {
           {ipamConnId && (
             <Button
               style={{ marginLeft: 8 }}
-              icon="plus"
+              icon={<PlusOutlined />}
               onClick={() => this.setState({ reserveVisible: true })}
             >
               Reserve IP
@@ -744,7 +738,7 @@ export default class DnsIpam extends React.Component {
           </Select>
           <Button
             style={{ marginLeft: 8 }}
-            icon="plus"
+            icon={<PlusOutlined />}
             onClick={() => this.setState({
               poolVisible: true,
               poolForm: {
