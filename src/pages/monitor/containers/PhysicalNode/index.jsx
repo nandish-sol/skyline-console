@@ -106,9 +106,14 @@ export const topCardList = [
             get(size, `data.result[${index}].value[1]`, 0)
           );
           const used = total - availValue;
+          const rawMount = get(item, `metric.${typeKey}`, '');
+          const rawDevice = get(item, `metric.${deviceKey}`, '');
+          // Show friendly label: "System Disk" for root mount, device path otherwise
+          const label = rawMount === '/' ? `System Disk (${rawDevice})`
+            : rawMount === 'System Disk' ? 'System Disk'
+            : rawDevice + rawMount;
           temp.push({
-            mountpoint:
-              get(item, `metric.${deviceKey}`) + get(item, `metric.${typeKey}`),
+            mountpoint: label,
             avail: availValue,
             total,
             used,

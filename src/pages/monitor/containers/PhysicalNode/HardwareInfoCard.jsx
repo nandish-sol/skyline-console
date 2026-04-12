@@ -115,7 +115,9 @@ const HardwareInfoCard = ({ host: hostProp }) => {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !data.hardware) {
+    // Don't silently hide — show a minimal placeholder on multi-node
+    // when the hardware API fails or returns empty
     return null;
   }
 

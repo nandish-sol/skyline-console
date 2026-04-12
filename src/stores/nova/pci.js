@@ -33,24 +33,28 @@ export class PCIDeviceStore extends Base {
   async listDidFetch(items) {
     // Extract PCI device pools from each hypervisor
     const pciDevices = [];
-    items.forEach((hypervisor) => {
-      const host = hypervisor.hypervisor_hostname || hypervisor.host || '';
-      const pools = hypervisor.pci_stats || hypervisor.pci_device_pools || [];
-      if (Array.isArray(pools)) {
-        pools.forEach((pool, idx) => {
-          pciDevices.push({
-            id: `${host}-${idx}`,
-            host,
-            vendor_id: pool.vendor_id || '',
-            product_id: pool.product_id || '',
-            count: pool.count || 0,
-            device_type: pool.dev_type || pool.device_type || '',
-            numa_node: pool.numa_node,
-            tags: pool.tags || {},
+    try {
+      items.forEach((hypervisor) => {
+        const host = hypervisor.hypervisor_hostname || hypervisor.host || '';
+        const pools = hypervisor.pci_stats || hypervisor.pci_device_pools || [];
+        if (Array.isArray(pools)) {
+          pools.forEach((pool, idx) => {
+            pciDevices.push({
+              id: `${host}-${idx}`,
+              host,
+              vendor_id: pool.vendor_id || '',
+              product_id: pool.product_id || '',
+              count: pool.count || 0,
+              device_type: pool.dev_type || pool.device_type || '',
+              numa_node: pool.numa_node,
+              tags: pool.tags || {},
+            });
           });
-        });
-      }
-    });
+        }
+      });
+    } catch (e) {
+      // PCI passthrough not configured — return empty list gracefully
+    }
     return pciDevices;
   }
 }
