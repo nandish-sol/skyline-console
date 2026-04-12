@@ -547,6 +547,13 @@ const renderMenu = (t) => {
             },
           ],
         },
+        {
+          path: '/network/dns-ipam-admin',
+          name: t('DNS & IPAM'),
+          key: 'dnsIpamAdmin',
+          endpoints: 'designate',
+          level: 1,
+        },
       ],
     },
     {

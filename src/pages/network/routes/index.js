@@ -57,6 +57,7 @@ import PolicyEdit from '../containers/Firewall/Policy/actions/Edit';
 import FirewallCreate from '../containers/Firewall/Firewall/actions/Create';
 import RbacPolicies from '../containers/RbacPolicies';
 import RbacPolicyDetail from '../containers/RbacPolicies/Detail';
+import DnsIpam from '../containers/DnsIpam';
 
 const PATH = '/network';
 export default [
@@ -366,6 +367,7 @@ export default [
         component: RbacPolicyDetail,
         exact: true,
       },
+      { path: `${PATH}/dns-ipam-admin`, component: DnsIpam, exact: true },
       { path: '*', component: E404 },
     ],
   },
